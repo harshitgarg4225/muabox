@@ -6,15 +6,17 @@ export async function proxy(request: NextRequest) {
 }
 
 export const config = {
+  /*
+   * Only run on authenticated sections. Public pages (landing, login, privacy,
+   * data-deletion status) never touch Supabase, so they stay up even if the
+   * backend is misconfigured.
+   */
   matcher: [
-    /*
-     * Match all request paths except for the ones starting with:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico, sitemap.xml, robots.txt
-     * - api routes (handled by their own auth)
-     * Always run on protected pages so sessions stay fresh.
-     */
-    "/((?!_next/static|_next/image|favicon.ico|api|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)",
+    "/dashboard/:path*",
+    "/onboarding/:path*",
+    "/settings/:path*",
+    "/discover/:path*",
+    "/artists/:path*",
+    "/deals/:path*",
   ],
 };

@@ -78,7 +78,7 @@ export function LoginForm() {
   }
 
   return (
-    <Card className="w-full max-w-sm">
+    <Card className="w-full max-w-sm shadow-soft">
       <CardHeader>
         <CardTitle>
           {mode === "signup" ? "Create your account" : "Welcome back"}
@@ -120,7 +120,12 @@ export function LoginForm() {
           </div>
         </CardContent>
         <CardFooter className="mt-4 flex-col gap-3">
-          <Button type="submit" className="w-full" disabled={loading}>
+          <Button
+            type="submit"
+            variant="accent"
+            className="w-full"
+            disabled={loading}
+          >
             {mode === "signup" ? "Sign up" : "Log in"}
           </Button>
           <Button

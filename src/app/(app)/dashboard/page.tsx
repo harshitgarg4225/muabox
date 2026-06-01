@@ -104,7 +104,7 @@ async function ArtistDashboard({
       <Banner connected={flags.connected} igError={flags.ig_error} />
 
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-2xl font-bold text-navy">
           {artist?.display_name ?? "Your"} dashboard
         </h1>
         <Button asChild variant="ghost" size="sm">
@@ -128,7 +128,7 @@ async function ArtistDashboard({
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button asChild>
+            <Button asChild variant="accent">
               <a href="/api/instagram/connect">
                 <Camera /> Connect Instagram
               </a>
@@ -213,7 +213,7 @@ async function BrandDashboard({ userId }: { userId: string }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">
+        <h1 className="text-2xl font-bold text-navy">
           {brand?.company_name ?? "Brand"} dashboard
         </h1>
         <Button asChild>

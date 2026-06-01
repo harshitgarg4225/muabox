@@ -23,7 +23,7 @@ export default async function SettingsPage() {
 
     return (
       <div className="space-y-6">
-        <h1 className="text-2xl font-bold">Profile &amp; pricing</h1>
+        <h1 className="text-2xl font-bold text-navy">Profile &amp; pricing</h1>
         <ArtistSettingsForm artist={artist} />
       </div>
     );
@@ -38,7 +38,7 @@ export default async function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Brand profile</h1>
+      <h1 className="text-2xl font-bold text-navy">Brand profile</h1>
       <BrandSettingsForm brand={brand} userId={user.id} />
     </div>
   );

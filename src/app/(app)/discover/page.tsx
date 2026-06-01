@@ -57,7 +57,7 @@ export default async function DiscoverPage({
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Discover artists</h1>
+      <h1 className="text-2xl font-bold text-navy">Discover artists</h1>
 
       <form className="grid gap-3 rounded-lg border p-4 sm:grid-cols-4">
         <div className="space-y-1">
@@ -111,7 +111,7 @@ export default async function DiscoverPage({
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {artists.map((a) => (
             <Link key={a.artist_id} href={`/artists/${a.artist_id}`}>
-              <Card className="h-full transition-shadow hover:shadow-md">
+              <Card className="h-full shadow-soft transition-all hover:-translate-y-1 hover:shadow-lift">
                 <CardHeader className="flex-row items-center gap-3">
                   {a.profile_picture_url ? (
                     <Image

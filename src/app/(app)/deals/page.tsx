@@ -24,18 +24,38 @@ export const dynamic = "force-dynamic";
 
 const STATUS_META: Record<
   DealStatus,
-  { label: string; variant: "default" | "secondary" | "destructive" | "outline" }
+  {
+    label: string;
+    variant: "default" | "secondary" | "destructive" | "outline";
+    className?: string;
+  }
 > = {
-  sent: { label: "New", variant: "secondary" },
+  sent: {
+    label: "New",
+    variant: "secondary",
+    className: "bg-yellow/20 text-yellow-600",
+  },
   viewed: { label: "Viewed", variant: "outline" },
-  accepted: { label: "Accepted", variant: "default" },
+  accepted: {
+    label: "Accepted",
+    variant: "default",
+    className: "bg-emerald-600 text-white",
+  },
   declined: { label: "Declined", variant: "destructive" },
-  completed: { label: "Completed", variant: "default" },
+  completed: {
+    label: "Completed",
+    variant: "default",
+    className: "bg-emerald-600 text-white",
+  },
 };
 
 function StatusBadge({ status }: { status: DealStatus }) {
   const meta = STATUS_META[status];
-  return <Badge variant={meta.variant}>{meta.label}</Badge>;
+  return (
+    <Badge variant={meta.variant} className={meta.className}>
+      {meta.label}
+    </Badge>
+  );
 }
 
 function DealMeta({ deal }: { deal: Deal }) {
@@ -101,7 +121,7 @@ async function ArtistInbox({ userId }: { userId: string }) {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-2xl font-bold">Your deals</h1>
+      <h1 className="text-2xl font-bold text-navy">Your deals</h1>
       {deals.length === 0 ? (
         <p className="text-muted-foreground">
           No deals yet. Make sure you&apos;re accepting deals on your{" "}
@@ -173,7 +193,7 @@ async function BrandSent({ userId }: { userId: string }) {
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold">Sent deals</h1>
+        <h1 className="text-2xl font-bold text-navy">Sent deals</h1>
         <Button asChild>
           <Link href="/discover">Discover artists</Link>
         </Button>

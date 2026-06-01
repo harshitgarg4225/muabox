@@ -8,9 +8,12 @@ export default function LoginPage() {
     <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
       <Link
         href="/"
-        className="mb-8 flex items-center gap-2 text-xl font-semibold"
+        className="mb-8 flex items-center gap-2 text-xl font-bold text-navy"
       >
-        <Sparkles className="size-5" /> Muabox
+        <span className="flex size-9 items-center justify-center rounded-xl bg-navy text-yellow">
+          <Sparkles className="size-5" />
+        </span>
+        Muabox
       </Link>
       <Suspense>
         <LoginForm />

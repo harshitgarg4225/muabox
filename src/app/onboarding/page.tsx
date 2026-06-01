@@ -30,7 +30,7 @@ export default async function OnboardingPage({
     <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-2xl space-y-6">
         <div className="text-center">
-          <h1 className="text-2xl font-bold">Welcome to Muabox</h1>
+          <h1 className="text-3xl font-bold text-navy">Welcome to Muabox</h1>
           <p className="text-muted-foreground">
             Tell us who you are so we can set up your account.
           </p>
@@ -71,10 +71,16 @@ function RoleCard({
   highlight: boolean;
 }) {
   return (
-    <Card className={highlight ? "ring-2 ring-ring" : undefined}>
+    <Card
+      className={`shadow-soft transition-shadow hover:shadow-lift ${
+        highlight ? "ring-2 ring-yellow" : ""
+      }`}
+    >
       <CardHeader>
-        {icon}
-        <CardTitle>{title}</CardTitle>
+        <div className="flex size-12 items-center justify-center rounded-2xl bg-navy text-yellow">
+          {icon}
+        </div>
+        <CardTitle className="text-navy">{title}</CardTitle>
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
@@ -90,7 +96,7 @@ function RoleCard({
               placeholder={role === "artist" ? "Your name" : "Your company"}
             />
           </div>
-          <Button type="submit" className="w-full">
+          <Button type="submit" variant="accent" className="w-full">
             Continue as {role}
           </Button>
         </form>

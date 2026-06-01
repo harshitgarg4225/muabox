@@ -24,6 +24,7 @@ export function DealResponseButtons({ dealId }: { dealId: string }) {
     <div className="flex gap-2">
       <Button
         size="sm"
+        variant="accent"
         disabled={pending}
         onClick={() => respond("accepted")}
       >
