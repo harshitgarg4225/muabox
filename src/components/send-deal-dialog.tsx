@@ -34,9 +34,15 @@ type FormValues = z.input<typeof schema>;
 export function SendDealDialog({
   artistId,
   artistName,
+  defaultCurrency = "USD",
+  pricingHint,
+  alreadySent = false,
 }: {
   artistId: string;
   artistName: string;
+  defaultCurrency?: string;
+  pricingHint?: string;
+  alreadySent?: boolean;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -47,7 +53,7 @@ export function SendDealDialog({
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { currency: "USD" },
+    defaultValues: { currency: defaultCurrency },
   });
 
   async function onSubmit(values: FormValues) {
@@ -74,8 +80,8 @@ export function SendDealDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button>
-          <Handshake /> Send a deal
+        <Button variant={alreadySent ? "outline" : "accent"}>
+          <Handshake /> {alreadySent ? "Send another deal" : "Send a deal"}
         </Button>
       </DialogTrigger>
       <DialogContent>
@@ -87,6 +93,12 @@ export function SendDealDialog({
               discuss.
             </DialogDescription>
           </DialogHeader>
+
+          {pricingHint && (
+            <div className="mt-2 rounded-lg bg-secondary px-3 py-2 text-sm text-muted-foreground">
+              {pricingHint}
+            </div>
+          )}
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">

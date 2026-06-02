@@ -14,12 +14,22 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MediaGallery } from "@/components/profile-stats";
 import { SendDealDialog } from "@/components/send-deal-dialog";
+import { SaveArtistButton } from "@/components/save-artist-button";
 import { engagementRate } from "@/lib/instagram";
 import {
   formatMoney,
   type ArtistPublicStats,
   type ArtistPublicMedia,
+  type Deal,
 } from "@/lib/types";
+
+const DEAL_STATUS_LABEL: Record<string, string> = {
+  sent: "sent — awaiting their reply",
+  viewed: "viewed by the artist",
+  accepted: "accepted 🎉",
+  declined: "declined",
+  completed: "completed",
+};
 
 export const dynamic = "force-dynamic";
 
@@ -33,8 +43,8 @@ export default async function ArtistDetailPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { profile } = await getUserAndProfile();
-  if (!profile) redirect("/login");
+  const { user, profile } = await getUserAndProfile();
+  if (!user || !profile) redirect("/login");
   if (profile.role !== "brand") redirect("/dashboard");
 
   const { id } = await params;
@@ -55,7 +65,33 @@ export default async function ArtistDetailPage({
     .order("posted_at", { ascending: false });
   const media = (mediaData as ArtistPublicMedia[]) ?? [];
 
+  // Has this brand already sent a deal to this artist?
+  const { data: existingDeal } = await supabase
+    .from("deals")
+    .select("*")
+    .eq("brand_id", user.id)
+    .eq("artist_id", id)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<Deal>();
+
+  const { data: savedRow } = await supabase
+    .from("saved_artists")
+    .select("artist_id")
+    .eq("brand_id", user.id)
+    .eq("artist_id", id)
+    .maybeSingle();
+
   const er = engagementRate(media, artist.followers_count);
+
+  const pricingHint =
+    artist.pricing === "fixed" && artist.price_min != null
+      ? `Listed rate: ${formatMoney(artist.price_min, artist.currency)}${
+          artist.price_max != null
+            ? `–${formatMoney(artist.price_max, artist.currency)}`
+            : "+"
+        }`
+      : "This artist asks brands to contact them for pricing.";
 
   const stats = [
     { label: "Followers", value: compact(artist.followers_count) },
@@ -98,12 +134,34 @@ export default async function ArtistDetailPage({
               )}
             </div>
           </div>
-          <SendDealDialog
-            artistId={artist.artist_id}
-            artistName={artist.display_name ?? artist.username ?? "this artist"}
-          />
+          <div className="flex items-center gap-2">
+            <SaveArtistButton
+              artistId={artist.artist_id}
+              initialSaved={!!savedRow}
+              withLabel
+            />
+            <SendDealDialog
+              artistId={artist.artist_id}
+              artistName={artist.display_name ?? artist.username ?? "this artist"}
+              defaultCurrency={artist.currency ?? "USD"}
+              pricingHint={pricingHint}
+              alreadySent={!!existingDeal}
+            />
+          </div>
         </CardHeader>
         <CardContent className="space-y-4">
+          {existingDeal && (
+            <div className="rounded-xl border border-navy/15 bg-navy/5 px-4 py-2.5 text-sm text-navy">
+              You&apos;ve already sent this artist a deal —{" "}
+              <span className="font-medium">
+                {DEAL_STATUS_LABEL[existingDeal.status] ?? existingDeal.status}
+              </span>
+              .{" "}
+              <Link href="/deals" className="underline">
+                View in Deals
+              </Link>
+            </div>
+          )}
           {artist.bio && <p className="text-sm">{artist.bio}</p>}
           <div className="grid grid-cols-3 gap-3">
             {stats.map((s) => (

@@ -141,7 +141,8 @@ create view artist_public_stats as
 select a.id as artist_id, a.display_name, a.bio, a.location, a.accepting_deals,
        a.pricing, a.price_min, a.price_max, a.currency,
        ia.username, ia.followers_count, ia.media_count, ia.profile_picture_url,
-       ia.biography
+       ia.biography,
+       a.created_at
 from artists a
 join instagram_accounts ia on ia.artist_id = a.id
 where a.accepting_deals = true;
@@ -168,6 +169,19 @@ from brands;
 grant select on artist_public_stats to authenticated;
 grant select on artist_public_media to authenticated;
 grant select on brand_public to authenticated;
+
+-- BRAND SHORTLISTS (saved/favorited artists)
+create table saved_artists (
+  brand_id uuid not null references brands(id) on delete cascade,
+  artist_id uuid not null references artists(id) on delete cascade,
+  created_at timestamptz default now(),
+  primary key (brand_id, artist_id)
+);
+
+alter table saved_artists enable row level security;
+create policy "own saves" on saved_artists
+  for all using (auth.uid() = brand_id) with check (auth.uid() = brand_id);
+grant select, insert, delete on saved_artists to authenticated;
 
 -- keep deals.updated_at fresh
 create or replace function set_updated_at()

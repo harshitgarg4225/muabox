@@ -96,6 +96,7 @@ export type ArtistPublicStats = {
   media_count: number | null;
   profile_picture_url: string | null;
   biography: string | null;
+  created_at: string;
 };
 
 export type ArtistPublicMedia = {
