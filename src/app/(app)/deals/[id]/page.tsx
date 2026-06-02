@@ -15,6 +15,7 @@ import { Button } from "@/components/ui/button";
 import { DealStatusBadge } from "@/components/deal-status-badge";
 import { DealActions } from "@/components/deal-actions";
 import { DealThread } from "@/components/deal-thread";
+import { PayDealButton } from "@/components/pay-deal-button";
 import {
   formatMoney,
   type Deal,
@@ -157,11 +158,48 @@ export default async function DealDetailPage({
             </div>
           </div>
 
-          <DealActions
-            dealId={deal.id}
-            role={profile.role}
-            status={deal.status}
-          />
+          {deal.paid_at && (
+            <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-2.5 text-sm font-medium text-emerald-700">
+              Paid {formatMoney(deal.offer_amount, deal.currency)} ·{" "}
+              {new Date(deal.paid_at).toLocaleDateString()}
+            </div>
+          )}
+
+          <div className="flex flex-wrap items-center gap-2">
+            <DealActions
+              dealId={deal.id}
+              role={profile.role}
+              status={deal.status}
+            />
+            {profile.role === "brand" &&
+              !deal.paid_at &&
+              (deal.status === "accepted" || deal.status === "completed") &&
+              deal.offer_amount != null &&
+              deal.offer_amount > 0 && (
+                <PayDealButton
+                  dealId={deal.id}
+                  amountLabel={formatMoney(deal.offer_amount, deal.currency) ?? ""}
+                />
+              )}
+          </div>
+
+          {profile.role === "artist" &&
+            !deal.paid_at &&
+            deal.status === "accepted" && (
+              <p className="text-sm text-muted-foreground">
+                Payment pending from the brand.
+              </p>
+            )}
+
+          {profile.role === "brand" &&
+            !deal.paid_at &&
+            (deal.status === "accepted" || deal.status === "completed") &&
+            (deal.offer_amount == null || deal.offer_amount <= 0) && (
+              <p className="text-sm text-muted-foreground">
+                This deal has no budget set. Agree on an amount in chat, then
+                send a new offer with that amount to pay securely via Razorpay.
+              </p>
+            )}
         </CardContent>
       </Card>
 

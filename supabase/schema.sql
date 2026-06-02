@@ -22,9 +22,9 @@ create table artists (
   location text,
   accepting_deals boolean default false,
   pricing pricing_model default 'custom',
-  price_min integer,           -- in minor currency units (e.g. cents); null if custom
+  price_min integer,           -- in minor currency units (e.g. paise); null if custom
   price_max integer,
-  currency text default 'USD',
+  currency text default 'INR',
   created_at timestamptz default now()
 );
 
@@ -82,13 +82,14 @@ create table deals (
   artist_id uuid not null references artists(id) on delete cascade,
   status deal_status default 'sent',
   message text,
-  offer_amount integer,        -- minor units; null if "let's discuss"
-  currency text default 'USD',
+  offer_amount integer,        -- minor units (paise); null if "let's discuss"
+  currency text default 'INR',
   product_description text,
   brand_read_at timestamptz,
   artist_read_at timestamptz,
   last_message_at timestamptz,
   last_message_sender_id uuid,
+  paid_at timestamptz,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -102,11 +103,28 @@ create table deal_messages (
   created_at timestamptz default now()
 );
 
+-- PAYMENTS (Razorpay; India)
+create table payments (
+  id uuid primary key default gen_random_uuid(),
+  deal_id uuid not null references deals(id) on delete cascade,
+  brand_id uuid not null references brands(id) on delete cascade,
+  artist_id uuid not null references artists(id) on delete cascade,
+  razorpay_order_id text not null,
+  razorpay_payment_id text,
+  amount integer not null,           -- minor units (paise)
+  currency text not null default 'INR',
+  status text not null default 'created',  -- created | paid | failed
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
 -- INDEXES
 create index instagram_media_account_idx on instagram_media (instagram_account_id);
 create index deals_artist_idx on deals (artist_id);
 create index deals_brand_idx on deals (brand_id);
 create index deal_messages_deal_idx on deal_messages (deal_id, created_at);
+create index payments_deal_idx on payments (deal_id);
+create unique index payments_order_uidx on payments (razorpay_order_id);
 
 -- RLS
 alter table profiles enable row level security;
@@ -116,6 +134,7 @@ alter table instagram_media enable row level security;
 alter table brands enable row level security;
 alter table deals enable row level security;
 alter table deal_messages enable row level security;
+alter table payments enable row level security;
 
 -- profiles: a user sees/edits only their own profile row
 create policy "own profile" on profiles for all using (auth.uid() = id);
@@ -164,6 +183,19 @@ create policy "participant sends messages" on deal_messages for insert with chec
   )
 );
 grant select, insert on deal_messages to authenticated;
+
+-- payments: participants read; the paying brand creates; captures are server-side
+create policy "participant reads payments" on payments for select using (
+  exists (
+    select 1 from deals d
+    where d.id = payments.deal_id
+      and (d.brand_id = auth.uid() or d.artist_id = auth.uid())
+  )
+);
+create policy "brand creates payment" on payments for insert with check (
+  brand_id = auth.uid()
+);
+grant select, insert on payments to authenticated;
 
 -- PUBLIC STATS VIEW (exposes follower/engagement WITHOUT the token column).
 -- A default (security definer) view so brands can read consented-artist stats

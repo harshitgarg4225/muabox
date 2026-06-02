@@ -139,6 +139,33 @@ export async function notifyDealCompleted(dealId: string, actorId: string) {
   }
 }
 
+export async function notifyPayment(dealId: string) {
+  if (!enabled()) return;
+  try {
+    const parties = await getDealParties(dealId);
+    if (!parties) return;
+    const { deal, brand, artist } = parties;
+    const amount =
+      deal.offer_amount != null
+        ? formatMoney(deal.offer_amount, deal.currency)
+        : "your fee";
+    await sendEmail({
+      to: artist.email,
+      subject: `You've been paid ${amount} 💸`,
+      html: emailLayout({
+        heading: "Payment received",
+        intro: `<strong>${brand.name}</strong> has paid <strong>${amount}</strong> for your collaboration on Muabox.`,
+        ctaText: "View the deal",
+        ctaPath: `/deals/${dealId}`,
+        footnote:
+          "Payments are processed securely via Razorpay. Payout to your account follows your payout setup.",
+      }),
+    });
+  } catch {
+    /* noop */
+  }
+}
+
 export async function notifyNewMessage(dealId: string, senderId: string) {
   if (!enabled()) return;
   try {

@@ -26,7 +26,8 @@ Built per the build bible in
 | Brand: profile + logo upload, Discover (search, sort, tiers, engagement, shortlists), artist detail | ✅ |
 | Deals: send, full lifecycle (accept/decline/complete), threaded messaging + live updates | ✅ |
 | Unread badges + read tracking across the deal inbox | ✅ |
-| Email notifications (new deal, accept/decline, new message, completed) via Resend | ✅ optional |
+| Email notifications (new deal, accept/decline, new message, completed, paid) via Resend | ✅ optional |
+| Payments: brand pays an accepted deal via Razorpay (Orders + Checkout + signature/webhook), INR | ✅ optional |
 | Meta compliance: deauthorize + data-deletion callbacks, status page, privacy policy | ✅ |
 | Token refresh + nightly sync (Vercel Cron) | ✅ |
 | Database schema + RLS + public views | ✅ `supabase/schema.sql` + `migrations/` |
@@ -82,7 +83,7 @@ npm install
    up before later upgrades, also run the files in
    [`supabase/migrations/`](supabase/migrations) in order — `0002` adds brand
    shortlists + the discover sort, `0003` adds deal messaging, read tracking and
-   live updates.)
+   live updates, `0004` adds Razorpay payments + INR defaults.)
 3. Storage → create a **public** bucket named `logos` (for brand logos).
 4. Auth → for easy local testing, disable "Confirm email" (Auth → Providers →
    Email) so password sign-up logs you straight in.
@@ -107,6 +108,23 @@ cp .env.example .env.local
 # generate a token encryption key:
 node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ```
+
+### 4b. Payments (Razorpay, India) — optional
+
+1. Create a [Razorpay](https://razorpay.com) account; grab the **Key ID** and
+   **Key Secret** (test mode is fine to start).
+2. Set `RAZORPAY_KEY_ID`, `RAZORPAY_KEY_SECRET`, and
+   `NEXT_PUBLIC_RAZORPAY_KEY_ID` (= the Key ID) in your env.
+3. In the Razorpay dashboard add a **webhook** → URL `${APP_URL}/api/payments/webhook`,
+   event `payment.captured`, and set its secret as `RAZORPAY_WEBHOOK_SECRET`.
+
+Currency is **INR**; amounts are stored in paise. Without these vars the Pay
+button simply reports "payments unavailable" — nothing breaks.
+
+> **Scope note:** this collects payment from the brand (Orders + Checkout, with
+> server-side signature + webhook verification). **Payout to the artist's bank**
+> requires Razorpay Route/X with artist KYC — that's the next milestone, not in
+> this MVP.
 
 ### 5. Run
 

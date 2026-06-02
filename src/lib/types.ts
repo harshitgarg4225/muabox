@@ -81,6 +81,21 @@ export type Deal = {
   artist_read_at: string | null;
   last_message_at: string | null;
   last_message_sender_id: string | null;
+  paid_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type Payment = {
+  id: string;
+  deal_id: string;
+  brand_id: string;
+  artist_id: string;
+  razorpay_order_id: string;
+  razorpay_payment_id: string | null;
+  amount: number;
+  currency: string;
+  status: "created" | "paid" | "failed";
   created_at: string;
   updated_at: string;
 };
@@ -133,10 +148,10 @@ export type BrandPublic = {
   description: string | null;
 };
 
-/** Format minor currency units (cents) as a display string. */
-export function formatMoney(minor: number | null, currency = "USD") {
+/** Format minor currency units (paise) as a display string. */
+export function formatMoney(minor: number | null, currency = "INR") {
   if (minor == null) return null;
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.NumberFormat("en-IN", {
     style: "currency",
     currency,
     maximumFractionDigits: 0,

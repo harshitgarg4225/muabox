@@ -25,7 +25,7 @@ import { sendDeal } from "@/app/(app)/deals/actions";
 const schema = z.object({
   message: z.string().min(1, "Add a message").max(1000),
   offer_amount: z.coerce.number().min(0).optional(),
-  currency: z.string().length(3).default("USD"),
+  currency: z.string().length(3).default("INR"),
   product_description: z.string().max(500).optional(),
 });
 
@@ -34,7 +34,7 @@ type FormValues = z.input<typeof schema>;
 export function SendDealDialog({
   artistId,
   artistName,
-  defaultCurrency = "USD",
+  defaultCurrency = "INR",
   pricingHint,
   alreadySent = false,
 }: {

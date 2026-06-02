@@ -124,7 +124,7 @@ export default function Home() {
           {[
             { icon: Users, value: "100%", label: "Consented creators" },
             { icon: Zap, value: "1 tap", label: "Instagram connect" },
-            { icon: ShieldCheck, value: "$0", label: "To get started" },
+            { icon: ShieldCheck, value: "₹0", label: "To get started" },
           ].map(({ icon: Icon, value, label }) => (
             <div key={label} className="flex flex-col items-center gap-2">
               <Icon className="size-7 text-yellow" />

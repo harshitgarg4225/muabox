@@ -62,7 +62,7 @@ export function ArtistSettingsForm({ artist }: { artist: Artist }) {
       pricing: artist.pricing,
       price_min: artist.price_min != null ? artist.price_min / 100 : undefined,
       price_max: artist.price_max != null ? artist.price_max / 100 : undefined,
-      currency: artist.currency ?? "USD",
+      currency: artist.currency ?? "INR",
     },
   });
 

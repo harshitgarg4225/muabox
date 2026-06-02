@@ -1,0 +1,59 @@
+import { NextResponse } from "next/server";
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { verifyPaymentSignature } from "@/lib/razorpay";
+import { notifyPayment } from "@/lib/notify";
+
+export const dynamic = "force-dynamic";
+
+/**
+ * Client callback after Razorpay Checkout succeeds. We verify the HMAC
+ * signature here for instant UX; the webhook is the durable source of truth.
+ */
+export async function POST(req: Request) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
+
+  const body = await req.json().catch(() => null);
+  const orderId = body?.razorpay_order_id as string | undefined;
+  const paymentId = body?.razorpay_payment_id as string | undefined;
+  const signature = body?.razorpay_signature as string | undefined;
+
+  if (!orderId || !paymentId || !signature) {
+    return NextResponse.json({ error: "bad_request" }, { status: 400 });
+  }
+
+  if (!verifyPaymentSignature({ orderId, paymentId, signature })) {
+    return NextResponse.json({ error: "invalid_signature" }, { status: 400 });
+  }
+
+  // Service role: capture writes bypass RLS but are gated by the verified
+  // signature + the brand ownership check below.
+  const admin = createAdminClient();
+  const { data: payment } = await admin
+    .from("payments")
+    .select("*")
+    .eq("razorpay_order_id", orderId)
+    .maybeSingle();
+
+  if (!payment || payment.brand_id !== user.id) {
+    return NextResponse.json({ error: "not_found" }, { status: 404 });
+  }
+  if (payment.status === "paid") {
+    return NextResponse.json({ success: true });
+  }
+
+  const now = new Date().toISOString();
+  await admin
+    .from("payments")
+    .update({ status: "paid", razorpay_payment_id: paymentId, updated_at: now })
+    .eq("id", payment.id);
+  await admin.from("deals").update({ paid_at: now }).eq("id", payment.deal_id);
+
+  await notifyPayment(payment.deal_id);
+
+  return NextResponse.json({ success: true });
+}
