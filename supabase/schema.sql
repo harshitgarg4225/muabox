@@ -85,14 +85,28 @@ create table deals (
   offer_amount integer,        -- minor units; null if "let's discuss"
   currency text default 'USD',
   product_description text,
+  brand_read_at timestamptz,
+  artist_read_at timestamptz,
+  last_message_at timestamptz,
+  last_message_sender_id uuid,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
+);
+
+-- DEAL MESSAGES (threaded conversation per deal)
+create table deal_messages (
+  id uuid primary key default gen_random_uuid(),
+  deal_id uuid not null references deals(id) on delete cascade,
+  sender_id uuid not null references profiles(id) on delete cascade,
+  body text not null,
+  created_at timestamptz default now()
 );
 
 -- INDEXES
 create index instagram_media_account_idx on instagram_media (instagram_account_id);
 create index deals_artist_idx on deals (artist_id);
 create index deals_brand_idx on deals (brand_id);
+create index deal_messages_deal_idx on deal_messages (deal_id, created_at);
 
 -- RLS
 alter table profiles enable row level security;
@@ -101,6 +115,7 @@ alter table instagram_accounts enable row level security;
 alter table instagram_media enable row level security;
 alter table brands enable row level security;
 alter table deals enable row level security;
+alter table deal_messages enable row level security;
 
 -- profiles: a user sees/edits only their own profile row
 create policy "own profile" on profiles for all using (auth.uid() = id);
@@ -131,6 +146,24 @@ create policy "brand owner" on brands for all using (auth.uid() = id);
 create policy "deal participants read" on deals for select using (auth.uid() = brand_id or auth.uid() = artist_id);
 create policy "brand creates deal" on deals for insert with check (auth.uid() = brand_id);
 create policy "participants update" on deals for update using (auth.uid() = brand_id or auth.uid() = artist_id);
+
+-- deal_messages: participants of the parent deal can read; post as self
+create policy "participant reads messages" on deal_messages for select using (
+  exists (
+    select 1 from deals d
+    where d.id = deal_messages.deal_id
+      and (d.brand_id = auth.uid() or d.artist_id = auth.uid())
+  )
+);
+create policy "participant sends messages" on deal_messages for insert with check (
+  sender_id = auth.uid()
+  and exists (
+    select 1 from deals d
+    where d.id = deal_messages.deal_id
+      and (d.brand_id = auth.uid() or d.artist_id = auth.uid())
+  )
+);
+grant select, insert on deal_messages to authenticated;
 
 -- PUBLIC STATS VIEW (exposes follower/engagement WITHOUT the token column).
 -- A default (security definer) view so brands can read consented-artist stats
@@ -194,3 +227,26 @@ end; $$;
 create trigger deals_set_updated_at
   before update on deals
   for each row execute function set_updated_at();
+
+-- keep deals.last_message_* fresh on every new message (powers unread badges)
+create or replace function bump_deal_on_message()
+returns trigger language plpgsql security definer as $$
+begin
+  update deals
+    set last_message_at = new.created_at,
+        last_message_sender_id = new.sender_id,
+        updated_at = now()
+    where id = new.deal_id;
+  return new;
+end; $$;
+
+create trigger deal_messages_bump
+  after insert on deal_messages
+  for each row execute function bump_deal_on_message();
+
+-- live updates for the deal thread
+do $$
+begin
+  alter publication supabase_realtime add table deal_messages;
+exception when others then null;
+end $$;

@@ -77,9 +77,10 @@ npm install
 
 1. Create a project at [supabase.com](https://supabase.com).
 2. Run [`supabase/schema.sql`](supabase/schema.sql) in the SQL editor. (If you set
-   up before the discovery upgrade, also run
-   [`supabase/migrations/0002_discovery.sql`](supabase/migrations/0002_discovery.sql)
-   for brand shortlists + the `created_at` discover sort.)
+   up before later upgrades, also run the files in
+   [`supabase/migrations/`](supabase/migrations) in order — `0002` adds brand
+   shortlists + the discover sort, `0003` adds deal messaging, read tracking and
+   live updates.)
 3. Storage → create a **public** bucket named `logos` (for brand logos).
 4. Auth → for easy local testing, disable "Confirm email" (Auth → Providers →
    Email) so password sign-up logs you straight in.

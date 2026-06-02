@@ -10,24 +10,26 @@ import type { UserRole } from "@/lib/types";
 export function AppNav({
   role,
   name,
+  dealsUnread = 0,
 }: {
   role: UserRole;
   name: string | null;
+  dealsUnread?: number;
 }) {
   const pathname = usePathname();
   const isArtist = role === "artist";
 
   const links = isArtist
     ? [
-        { href: "/dashboard", label: "Dashboard" },
-        { href: "/deals", label: "Deals" },
-        { href: "/settings", label: "Profile" },
+        { href: "/dashboard", label: "Dashboard", badge: 0 },
+        { href: "/deals", label: "Deals", badge: dealsUnread },
+        { href: "/settings", label: "Profile", badge: 0 },
       ]
     : [
-        { href: "/dashboard", label: "Dashboard" },
-        { href: "/discover", label: "Discover" },
-        { href: "/deals", label: "Deals" },
-        { href: "/settings", label: "Profile" },
+        { href: "/dashboard", label: "Dashboard", badge: 0 },
+        { href: "/discover", label: "Discover", badge: 0 },
+        { href: "/deals", label: "Deals", badge: dealsUnread },
+        { href: "/settings", label: "Profile", badge: 0 },
       ];
 
   return (
@@ -52,13 +54,18 @@ export function AppNav({
                 key={l.href}
                 href={l.href}
                 className={cn(
-                  "rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
+                  "relative rounded-full px-3 py-1.5 text-sm font-medium transition-colors",
                   active
                     ? "bg-navy text-white"
                     : "text-muted-foreground hover:bg-secondary hover:text-navy"
                 )}
               >
                 {l.label}
+                {l.badge > 0 && (
+                  <span className="ml-1.5 inline-flex min-w-5 items-center justify-center rounded-full bg-yellow px-1.5 text-xs font-bold text-navy">
+                    {l.badge}
+                  </span>
+                )}
               </Link>
             );
           })}

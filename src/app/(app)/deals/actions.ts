@@ -32,7 +32,9 @@ export async function sendDeal(formData: FormData) {
   if (!artistId) throw new Error("Missing artist");
   if (!message) return { ok: false as const, reason: "message_required" };
 
-  // RLS enforces brand_id = auth.uid() on insert.
+  const now = new Date().toISOString();
+  // RLS enforces brand_id = auth.uid() on insert. The offer is the first
+  // message in the thread (from the brand), so the artist sees it as unread.
   const { error } = await supabase.from("deals").insert({
     brand_id: user.id,
     artist_id: artistId,
@@ -41,6 +43,9 @@ export async function sendDeal(formData: FormData) {
     offer_amount: offerAmount,
     currency,
     status: "sent",
+    last_message_at: now,
+    last_message_sender_id: user.id,
+    brand_read_at: now,
   });
   if (error) return { ok: false as const, reason: error.message };
 
@@ -53,23 +58,63 @@ export async function respondToDeal(dealId: string, status: DealStatus) {
   if (status !== "accepted" && status !== "declined") {
     throw new Error("Invalid status");
   }
-  // RLS: only the artist (participant) can update.
+  // RLS: only participants can update.
   const { error } = await supabase
     .from("deals")
     .update({ status })
     .eq("id", dealId);
   if (error) throw error;
+  revalidatePath(`/deals/${dealId}`);
   revalidatePath("/deals");
 }
 
-export async function markViewed(dealId: string) {
+export async function completeDeal(dealId: string) {
   const { supabase } = await requireUser();
-  // Only bump 'sent' -> 'viewed'; leave terminal states alone.
+  // Either participant can mark an accepted deal complete.
   const { error } = await supabase
     .from("deals")
-    .update({ status: "viewed" })
+    .update({ status: "completed" })
     .eq("id", dealId)
-    .eq("status", "sent");
+    .eq("status", "accepted");
   if (error) throw error;
+  revalidatePath(`/deals/${dealId}`);
   revalidatePath("/deals");
+}
+
+export async function sendMessage(dealId: string, body: string) {
+  const { supabase, user } = await requireUser();
+  const text = body.trim();
+  if (!text) return { ok: false as const };
+
+  // RLS: sender must be a participant and post as themselves.
+  const { error } = await supabase
+    .from("deal_messages")
+    .insert({ deal_id: dealId, sender_id: user.id, body: text });
+  if (error) return { ok: false as const };
+
+  // Mark the deal read for the sender (they just engaged with it).
+  await markDealRead(dealId);
+  revalidatePath(`/deals/${dealId}`);
+  return { ok: true as const };
+}
+
+/** Stamp the current user's read marker for a deal (powers unread badges). */
+export async function markDealRead(dealId: string) {
+  const { supabase, user } = await requireUser();
+
+  const { data: deal } = await supabase
+    .from("deals")
+    .select("brand_id, artist_id, status")
+    .eq("id", dealId)
+    .maybeSingle();
+  if (!deal) return;
+
+  const isBrand = deal.brand_id === user.id;
+  const patch: Record<string, unknown> = {
+    [isBrand ? "brand_read_at" : "artist_read_at"]: new Date().toISOString(),
+  };
+  // First time the artist opens a fresh offer, bump 'sent' -> 'viewed'.
+  if (!isBrand && deal.status === "sent") patch.status = "viewed";
+
+  await supabase.from("deals").update(patch).eq("id", dealId);
 }

@@ -77,8 +77,20 @@ export type Deal = {
   offer_amount: number | null;
   currency: string;
   product_description: string | null;
+  brand_read_at: string | null;
+  artist_read_at: string | null;
+  last_message_at: string | null;
+  last_message_sender_id: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type DealMessage = {
+  id: string;
+  deal_id: string;
+  sender_id: string;
+  body: string;
+  created_at: string;
 };
 
 export type ArtistPublicStats = {
