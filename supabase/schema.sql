@@ -9,6 +9,8 @@ create table profiles (
   role user_role not null,
   full_name text,
   email text,
+  is_admin boolean default false,
+  suspended boolean default false,
   created_at timestamptz default now()
 );
 
@@ -154,6 +156,10 @@ alter table artist_payout_accounts enable row level security;
 
 -- profiles: a user sees/edits only their own profile row
 create policy "own profile" on profiles for all using (auth.uid() = id);
+-- but users must not be able to UPDATE profiles (would allow self-escalation of
+-- is_admin/suspended); admin/moderation writes use the service role.
+revoke update on profiles from authenticated;
+revoke update on profiles from anon;
 
 -- artists: owner full access; anyone authenticated can READ artists who are accepting deals
 create policy "artist owner" on artists for all using (auth.uid() = id);

@@ -21,10 +21,12 @@ export function AppNav({
   role,
   name,
   dealsUnread = 0,
+  isAdmin = false,
 }: {
   role: UserRole;
   name: string | null;
   dealsUnread?: number;
+  isAdmin?: boolean;
 }) {
   const pathname = usePathname();
   const isArtist = role === "artist";
@@ -83,6 +85,19 @@ export function AppNav({
           </nav>
 
           <div className="flex shrink-0 items-center gap-2">
+            {isAdmin && (
+              <Link
+                href="/admin"
+                className={cn(
+                  "hidden rounded-full px-3 py-1.5 text-sm font-medium transition-colors sm:inline-block",
+                  pathname.startsWith("/admin")
+                    ? "bg-navy text-white"
+                    : "text-muted-foreground hover:bg-secondary hover:text-navy"
+                )}
+              >
+                Admin
+              </Link>
+            )}
             <span className="hidden max-w-[10rem] truncate text-sm font-medium text-navy sm:inline">
               {name ?? (isArtist ? "Artist" : "Brand")}
             </span>

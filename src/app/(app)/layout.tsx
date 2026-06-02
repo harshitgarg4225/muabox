@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { getUserAndProfile } from "@/lib/auth";
+import { isAdminProfile } from "@/lib/admin-auth";
 import { createClient } from "@/lib/supabase/server";
 import { AppNav } from "@/components/app-nav";
 import type { Deal } from "@/lib/types";
@@ -12,8 +13,10 @@ export default async function AppLayout({
   const { user, profile } = await getUserAndProfile();
   if (!user) redirect("/login");
   if (!profile) redirect("/onboarding");
+  if (profile.suspended) redirect("/suspended");
 
   const isArtist = profile.role === "artist";
+  const isAdmin = isAdminProfile(profile, user.email);
 
   // Unread deals = latest activity from the other party, after my read marker.
   const supabase = await createClient();
@@ -41,6 +44,7 @@ export default async function AppLayout({
         role={profile.role}
         name={profile.full_name}
         dealsUnread={dealsUnread}
+        isAdmin={isAdmin}
       />
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 pb-24 sm:px-6 sm:pb-8">
         {children}

@@ -7,6 +7,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { DealStatusBadge } from "@/components/deal-status-badge";
 import { EmptyState } from "@/components/empty-state";
+import { CursorPager } from "@/components/cursor-pager";
 import {
   formatMoney,
   type Deal,
@@ -15,6 +16,8 @@ import {
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
+
+const PAGE = 20;
 
 function timeAgo(iso: string | null) {
   if (!iso) return "";
@@ -28,19 +31,31 @@ function timeAgo(iso: string | null) {
   return days < 7 ? `${days}d ago` : new Date(iso).toLocaleDateString();
 }
 
-export default async function DealsPage() {
+export default async function DealsPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ before?: string }>;
+}) {
   const { user, profile } = await getUserAndProfile();
   if (!user || !profile) redirect("/login");
 
   const isArtist = profile.role === "artist";
+  const { before } = await searchParams;
   const supabase = await createClient();
 
-  const { data } = await supabase
+  let query = supabase
     .from("deals")
     .select("*")
     .eq(isArtist ? "artist_id" : "brand_id", user.id)
-    .order("last_message_at", { ascending: false, nullsFirst: false });
-  const deals = (data as Deal[]) ?? [];
+    .order("last_message_at", { ascending: false, nullsFirst: false })
+    .limit(PAGE + 1);
+  if (before) query = query.lt("last_message_at", before);
+
+  const { data } = await query;
+  const rows = (data as Deal[]) ?? [];
+  const hasMore = rows.length > PAGE;
+  const deals = rows.slice(0, PAGE);
+  const nextCursor = hasMore ? deals[deals.length - 1].last_message_at : null;
 
   // Resolve counterparties from public views.
   const names = new Map<string, { name: string; avatar: string | null }>();
@@ -161,6 +176,13 @@ export default async function DealsPage() {
           })}
         </div>
       )}
+
+      <CursorPager
+        basePath="/deals"
+        params={{}}
+        nextCursor={nextCursor}
+        hasCursor={!!before}
+      />
     </div>
   );
 }

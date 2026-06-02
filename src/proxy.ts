@@ -18,5 +18,6 @@ export const config = {
     "/discover/:path*",
     "/artists/:path*",
     "/deals/:path*",
+    "/admin/:path*",
   ],
 };

@@ -29,6 +29,8 @@ Built per the build bible in
 | Email notifications (new deal, accept/decline, new message, completed, paid) via Resend | ✅ optional |
 | Payments: brand pays an accepted deal via Razorpay (Orders + Checkout + signature/webhook), INR | ✅ optional |
 | Artist payouts: Razorpay Route linked accounts + KYC/bank onboarding + auto transfer on capture (configurable platform fee) | ✅ optional |
+| Admin dashboard: overview/observability, user moderation (suspend, grant admin), deals & payments browsers | ✅ |
+| Cursor pagination on the deals inbox + all admin lists | ✅ |
 | Meta compliance: deauthorize + data-deletion callbacks, status page, privacy policy | ✅ |
 | Token refresh + nightly sync (Vercel Cron) | ✅ |
 | Database schema + RLS + public views | ✅ `supabase/schema.sql` + `migrations/` |
@@ -85,7 +87,7 @@ npm install
    [`supabase/migrations/`](supabase/migrations) in order — `0002` adds brand
    shortlists + the discover sort, `0003` adds deal messaging, read tracking and
    live updates, `0004` adds Razorpay payments + INR defaults, `0005` adds
-   artist payouts (Razorpay Route).)
+   artist payouts (Razorpay Route), `0006` adds admin + moderation flags.)
 3. Storage → create a **public** bucket named `logos` (for brand logos).
 4. Auth → for easy local testing, disable "Confirm email" (Auth → Providers →
    Email) so password sign-up logs you straight in.
@@ -135,6 +137,18 @@ button simply reports "payments unavailable" — nothing breaks.
   activate payouts.
 - Enable Route on your Razorpay account; no extra keys needed (it uses the same
   `RAZORPAY_KEY_ID`/`SECRET`).
+
+### 4c. Admin access — optional
+
+Admins can reach `/admin` (overview, user moderation, deals & payments). Grant
+access either way:
+
+- set `ADMIN_EMAILS=you@example.com` (comma-separated) in the env, or
+- `update profiles set is_admin = true where email = 'you@example.com';`
+
+Suspending a user blocks their app access and hides artists from Discover.
+Users can never edit their own `is_admin`/`suspended` (UPDATE on `profiles` is
+revoked from the client; only the service role writes those).
 
 ### 5. Run
 

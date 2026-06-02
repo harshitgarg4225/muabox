@@ -12,6 +12,8 @@ export type Profile = {
   role: UserRole;
   full_name: string | null;
   email: string | null;
+  is_admin: boolean;
+  suspended: boolean;
   created_at: string;
 };
 
