@@ -42,7 +42,7 @@ export default async function AppLayout({
         name={profile.full_name}
         dealsUnread={dealsUnread}
       />
-      <main className="mx-auto w-full max-w-6xl flex-1 px-6 py-8">
+      <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8 pb-24 sm:px-6 sm:pb-8">
         {children}
       </main>
     </div>

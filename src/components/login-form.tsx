@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
+import { safeNextPath } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -20,7 +21,10 @@ export function LoginForm() {
   const router = useRouter();
   const params = useSearchParams();
   const role = params.get("role");
-  const next = params.get("next") ?? (role ? `/onboarding?role=${role}` : "/dashboard");
+  const next = safeNextPath(
+    params.get("next"),
+    role ? `/onboarding?role=${role}` : "/dashboard"
+  );
 
   const supabase = createClient();
   const [email, setEmail] = useState("");
@@ -155,6 +159,17 @@ export function LoginForm() {
               ? "Already have an account? Log in"
               : "Need an account? Sign up"}
           </button>
+          <p className="text-center text-xs text-muted-foreground">
+            By continuing you agree to our{" "}
+            <a href="/terms" className="underline">
+              Terms
+            </a>{" "}
+            and{" "}
+            <a href="/privacy" className="underline">
+              Privacy Policy
+            </a>
+            .
+          </p>
         </CardFooter>
       </form>
     </Card>

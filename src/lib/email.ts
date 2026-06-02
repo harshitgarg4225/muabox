@@ -34,6 +34,16 @@ export async function sendEmail({
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? "https://muabox.app";
 
+/** Escape user-supplied text before inlining into email HTML. */
+export function esc(s: string): string {
+  return s
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 /** Branded (navy/yellow) HTML email with a single CTA. */
 export function emailLayout({
   heading,

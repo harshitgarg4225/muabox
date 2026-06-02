@@ -33,6 +33,15 @@ export function DealThread({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
+  // Fallback polling so the recipient sees new messages even if Realtime
+  // isn't enabled on the project. Pauses when the tab is hidden.
+  useEffect(() => {
+    const id = setInterval(() => {
+      if (!document.hidden) router.refresh();
+    }, 20000);
+    return () => clearInterval(id);
+  }, [router]);
+
   // Live updates: on any new message for this deal, re-fetch under RLS.
   useEffect(() => {
     const supabase = createClient();

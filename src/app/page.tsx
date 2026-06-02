@@ -293,9 +293,14 @@ function SiteFooter() {
           <Sparkles className="size-4" /> Muabox
         </span>
         <span>© {new Date().getFullYear()} Muabox. All rights reserved.</span>
-        <Link href="/privacy" className="hover:text-navy hover:underline">
-          Privacy Policy
-        </Link>
+        <div className="flex gap-4">
+          <Link href="/terms" className="hover:text-navy hover:underline">
+            Terms
+          </Link>
+          <Link href="/privacy" className="hover:text-navy hover:underline">
+            Privacy Policy
+          </Link>
+        </div>
       </div>
     </footer>
   );

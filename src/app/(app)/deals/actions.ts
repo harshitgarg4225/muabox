@@ -99,7 +99,7 @@ export async function completeDeal(dealId: string) {
 
 export async function sendMessage(dealId: string, body: string) {
   const { supabase, user } = await requireUser();
-  const text = body.trim();
+  const text = body.trim().slice(0, 4000); // cap length server-side
   if (!text) return { ok: false as const };
 
   // RLS: sender must be a participant and post as themselves.
