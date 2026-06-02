@@ -68,6 +68,17 @@ export default async function DealDetailPage({
     : [];
   const messages = [...opening, ...((messageRows as DealMessage[]) ?? [])];
 
+  // For a paid deal, does the artist have payouts set up?
+  let artistPayoutActive = false;
+  if (profile.role === "artist" && deal.paid_at) {
+    const { data: pa } = await supabase
+      .from("artist_payout_accounts")
+      .select("status")
+      .eq("artist_id", user.id)
+      .maybeSingle();
+    artistPayoutActive = pa?.status === "active";
+  }
+
   // Resolve the counterparty (public view; no sensitive data).
   let counterpartyName = profile.role === "artist" ? "A brand" : "Artist";
   let counterpartyAvatar: string | null = null;
@@ -162,6 +173,16 @@ export default async function DealDetailPage({
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-2.5 text-sm font-medium text-emerald-700">
               Paid {formatMoney(deal.offer_amount, deal.currency)} ·{" "}
               {new Date(deal.paid_at).toLocaleDateString()}
+            </div>
+          )}
+
+          {profile.role === "artist" && deal.paid_at && !artistPayoutActive && (
+            <div className="rounded-xl border border-yellow/40 bg-yellow/10 px-4 py-2.5 text-sm text-navy">
+              This payment is waiting for your payout details.{" "}
+              <Link href="/settings" className="font-medium underline">
+                Set up payouts
+              </Link>{" "}
+              to receive it in your bank account.
             </div>
           )}
 

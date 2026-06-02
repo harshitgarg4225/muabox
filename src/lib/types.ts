@@ -96,6 +96,20 @@ export type Payment = {
   amount: number;
   currency: string;
   status: "created" | "paid" | "failed";
+  transfer_id: string | null;
+  transfer_status: "none" | "pending" | "done" | "failed";
+  transferred_amount: number | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type ArtistPayoutAccount = {
+  artist_id: string;
+  razorpay_account_id: string | null;
+  razorpay_product_id: string | null;
+  status: "pending" | "active" | "failed";
+  bank_last4: string | null;
+  beneficiary_name: string | null;
   created_at: string;
   updated_at: string;
 };

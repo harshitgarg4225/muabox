@@ -28,6 +28,7 @@ Built per the build bible in
 | Unread badges + read tracking across the deal inbox | ✅ |
 | Email notifications (new deal, accept/decline, new message, completed, paid) via Resend | ✅ optional |
 | Payments: brand pays an accepted deal via Razorpay (Orders + Checkout + signature/webhook), INR | ✅ optional |
+| Artist payouts: Razorpay Route linked accounts + KYC/bank onboarding + auto transfer on capture (configurable platform fee) | ✅ optional |
 | Meta compliance: deauthorize + data-deletion callbacks, status page, privacy policy | ✅ |
 | Token refresh + nightly sync (Vercel Cron) | ✅ |
 | Database schema + RLS + public views | ✅ `supabase/schema.sql` + `migrations/` |
@@ -83,7 +84,8 @@ npm install
    up before later upgrades, also run the files in
    [`supabase/migrations/`](supabase/migrations) in order — `0002` adds brand
    shortlists + the discover sort, `0003` adds deal messaging, read tracking and
-   live updates, `0004` adds Razorpay payments + INR defaults.)
+   live updates, `0004` adds Razorpay payments + INR defaults, `0005` adds
+   artist payouts (Razorpay Route).)
 3. Storage → create a **public** bucket named `logos` (for brand logos).
 4. Auth → for easy local testing, disable "Confirm email" (Auth → Providers →
    Email) so password sign-up logs you straight in.
@@ -121,10 +123,18 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 Currency is **INR**; amounts are stored in paise. Without these vars the Pay
 button simply reports "payments unavailable" — nothing breaks.
 
-> **Scope note:** this collects payment from the brand (Orders + Checkout, with
-> server-side signature + webhook verification). **Payout to the artist's bank**
-> requires Razorpay Route/X with artist KYC — that's the next milestone, not in
-> this MVP.
+**Artist payouts (Razorpay Route)** — the money loop is closed:
+
+- Artists add KYC + bank details under **Profile → Payouts**, which creates a
+  Razorpay **linked account** + Route product and configures settlements. Only
+  the bank's last 4 digits are stored locally; the rest goes to Razorpay.
+- On payment capture (verify + webhook) we **auto-transfer** the artist's share
+  to their linked account, withholding `PLATFORM_FEE_PERCENT` (default 10%).
+- Payments captured before an artist finishes payout setup are held
+  (`transfer_status = pending`) and **reconciled automatically** the moment they
+  activate payouts.
+- Enable Route on your Razorpay account; no extra keys needed (it uses the same
+  `RAZORPAY_KEY_ID`/`SECRET`).
 
 ### 5. Run
 

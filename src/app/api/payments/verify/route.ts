@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyPaymentSignature } from "@/lib/razorpay";
 import { notifyPayment } from "@/lib/notify";
+import { attemptTransfer } from "@/lib/payouts";
+import type { Payment } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -52,6 +54,14 @@ export async function POST(req: Request) {
     .update({ status: "paid", razorpay_payment_id: paymentId, updated_at: now })
     .eq("id", payment.id);
   await admin.from("deals").update({ paid_at: now }).eq("id", payment.deal_id);
+
+  // Pay the artist (Route). Fail-safe: never blocks the captured payment.
+  const { data: fresh } = await admin
+    .from("payments")
+    .select("*")
+    .eq("id", payment.id)
+    .single<Payment>();
+  if (fresh) await attemptTransfer(admin, fresh);
 
   await notifyPayment(payment.deal_id);
 

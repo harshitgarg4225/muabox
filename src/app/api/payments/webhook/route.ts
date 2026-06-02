@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyWebhookSignature } from "@/lib/razorpay";
 import { notifyPayment } from "@/lib/notify";
+import { attemptTransfer } from "@/lib/payouts";
+import type { Payment } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -57,6 +59,14 @@ export async function POST(req: Request) {
           .from("deals")
           .update({ paid_at: now })
           .eq("id", payment.deal_id);
+
+        const { data: fresh } = await admin
+          .from("payments")
+          .select("*")
+          .eq("id", payment.id)
+          .single<Payment>();
+        if (fresh) await attemptTransfer(admin, fresh);
+
         await notifyPayment(payment.deal_id);
       }
     }

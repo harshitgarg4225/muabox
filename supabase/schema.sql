@@ -114,6 +114,21 @@ create table payments (
   amount integer not null,           -- minor units (paise)
   currency text not null default 'INR',
   status text not null default 'created',  -- created | paid | failed
+  transfer_id text,                  -- Razorpay Route transfer to the artist
+  transfer_status text not null default 'none',  -- none | pending | done | failed
+  transferred_amount integer,        -- minor units actually sent to the artist
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+
+-- ARTIST PAYOUT ACCOUNTS (Razorpay Route linked accounts)
+create table artist_payout_accounts (
+  artist_id uuid primary key references artists(id) on delete cascade,
+  razorpay_account_id text,
+  razorpay_product_id text,
+  status text not null default 'pending',   -- pending | active | failed
+  bank_last4 text,
+  beneficiary_name text,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -135,6 +150,7 @@ alter table brands enable row level security;
 alter table deals enable row level security;
 alter table deal_messages enable row level security;
 alter table payments enable row level security;
+alter table artist_payout_accounts enable row level security;
 
 -- profiles: a user sees/edits only their own profile row
 create policy "own profile" on profiles for all using (auth.uid() = id);
@@ -196,6 +212,11 @@ create policy "brand creates payment" on payments for insert with check (
   brand_id = auth.uid()
 );
 grant select, insert on payments to authenticated;
+
+-- artist_payout_accounts: each artist owns their own record
+create policy "own payout account" on artist_payout_accounts
+  for all using (auth.uid() = artist_id) with check (auth.uid() = artist_id);
+grant select, insert, update on artist_payout_accounts to authenticated;
 
 -- PUBLIC STATS VIEW (exposes follower/engagement WITHOUT the token column).
 -- A default (security definer) view so brands can read consented-artist stats

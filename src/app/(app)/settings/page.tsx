@@ -3,7 +3,9 @@ import { getUserAndProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { ArtistSettingsForm } from "@/components/artist-settings-form";
 import { BrandSettingsForm } from "@/components/brand-settings-form";
-import type { Artist, Brand } from "@/lib/types";
+import { PayoutOnboardingForm } from "@/components/payout-onboarding-form";
+import { routeConfigured } from "@/lib/razorpay-route";
+import type { Artist, Brand, ArtistPayoutAccount } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -21,10 +23,17 @@ export default async function SettingsPage() {
       .maybeSingle<Artist>();
     if (!artist) redirect("/onboarding");
 
+    const { data: payout } = await supabase
+      .from("artist_payout_accounts")
+      .select("*")
+      .eq("artist_id", user.id)
+      .maybeSingle<ArtistPayoutAccount>();
+
     return (
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-navy">Profile &amp; pricing</h1>
         <ArtistSettingsForm artist={artist} />
+        <PayoutOnboardingForm account={payout ?? null} configured={routeConfigured()} />
       </div>
     );
   }
