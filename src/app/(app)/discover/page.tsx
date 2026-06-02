@@ -14,6 +14,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { EmptyState } from "@/components/empty-state";
 import { formatMoney, type ArtistPublicStats } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -54,6 +55,7 @@ export default async function DiscoverPage({
 
   const { data } = await query;
   const artists = (data as ArtistPublicStats[]) ?? [];
+  const hasFilters = !!(location || min_followers || pricing);
 
   return (
     <div className="space-y-6">
@@ -104,9 +106,20 @@ export default async function DiscoverPage({
       </form>
 
       {artists.length === 0 ? (
-        <p className="text-muted-foreground">
-          No artists match your filters yet.
-        </p>
+        hasFilters ? (
+          <EmptyState
+            emoji="🔍"
+            title="No artists match those filters"
+            body="Try widening your follower range, clearing the location, or switching the pricing filter."
+            action={{ label: "Clear filters", href: "/discover" }}
+          />
+        ) : (
+          <EmptyState
+            emoji="💄"
+            title="New artists are joining every day"
+            body="No creators are accepting deals just yet. Check back soon — we'll have fresh faces for your next collab."
+          />
+        )
       ) : (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {artists.map((a) => (

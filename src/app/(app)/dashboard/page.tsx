@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { AcceptingToggle } from "@/components/accepting-toggle";
 import { RefreshStatsButton } from "@/components/refresh-stats-button";
 import { StatGrid, MediaGallery, IgHeader } from "@/components/profile-stats";
+import { GettingStarted } from "@/components/getting-started";
+import { EmptyState } from "@/components/empty-state";
 import type {
   Artist,
   Brand,
@@ -99,6 +101,9 @@ async function ArtistDashboard({
     .select("id", { count: "exact", head: true })
     .eq("artist_id", userId);
 
+  const profileComplete = !!(artist?.bio || artist?.location);
+  const accepting = !!artist?.accepting_deals;
+
   return (
     <div className="space-y-6">
       <Banner connected={flags.connected} igError={flags.ig_error} />
@@ -113,6 +118,32 @@ async function ArtistDashboard({
           </Link>
         </Button>
       </div>
+
+      <GettingStarted
+        allDoneTitle="You're live for brands! 🎉"
+        allDoneBody="Your profile is discoverable and you're accepting deals. Sit back — offers land in your Deals inbox."
+        steps={[
+          {
+            title: "Connect your Instagram",
+            description:
+              "Auto-fill your stats so brands can evaluate you. Requires a Professional (Business/Creator) account.",
+            done: !!account,
+            cta: { label: "Connect", href: "/api/instagram/connect" },
+          },
+          {
+            title: "Complete your profile",
+            description: "Add a short bio and your location so brands know you.",
+            done: profileComplete,
+            cta: { label: "Edit profile", href: "/settings" },
+          },
+          {
+            title: "Turn on accepting deals",
+            description: "Flip the switch to appear in brand searches.",
+            done: accepting,
+            cta: { label: "Go live", href: "/dashboard#accepting" },
+          },
+        ]}
+      />
 
       {!account ? (
         <Card>
@@ -164,7 +195,9 @@ async function ArtistDashboard({
             </CardContent>
           </Card>
 
-          <AcceptingToggle initial={artist?.accepting_deals ?? false} />
+          <div id="accepting" className="scroll-mt-24">
+            <AcceptingToggle initial={artist?.accepting_deals ?? false} />
+          </div>
 
           <Card>
             <CardHeader>
@@ -210,16 +243,42 @@ async function BrandDashboard({ userId }: { userId: string }) {
     accepted: sent.filter((d) => d.status === "accepted").length,
   };
 
+  const profileComplete = !!(
+    brand?.company_name &&
+    (brand?.website || brand?.description || brand?.logo_url)
+  );
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-navy">
           {brand?.company_name ?? "Brand"} dashboard
         </h1>
-        <Button asChild>
+        <Button asChild variant="accent">
           <Link href="/discover">Discover artists</Link>
         </Button>
       </div>
+
+      <GettingStarted
+        allDoneTitle="You're all set! 🎉"
+        allDoneBody="Keep discovering artists and sending deals — track every offer right here."
+        steps={[
+          {
+            title: "Complete your brand profile",
+            description:
+              "Add your logo, website and a short description so artists trust your offers.",
+            done: profileComplete,
+            cta: { label: "Edit profile", href: "/settings" },
+          },
+          {
+            title: "Send your first deal",
+            description:
+              "Find an artist who fits your launch and send a PR collab offer.",
+            done: sent.length > 0,
+            cta: { label: "Discover artists", href: "/discover" },
+          },
+        ]}
+      />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <SummaryCard label="Deals sent" value={sent.length} icon={<Send />} />
@@ -238,13 +297,12 @@ async function BrandDashboard({ userId }: { userId: string }) {
         </CardHeader>
         <CardContent>
           {sent.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
-              No deals yet.{" "}
-              <Link href="/discover" className="underline">
-                Discover artists
-              </Link>{" "}
-              to send your first offer.
-            </p>
+            <EmptyState
+              emoji="✨"
+              title="No deals sent yet"
+              body="Browse opted-in artists, find the right fit for your launch, and send your first PR collab offer in seconds."
+              action={{ label: "Discover artists", href: "/discover" }}
+            />
           ) : (
             <Button asChild variant="outline">
               <Link href="/deals">View all deals</Link>
@@ -252,15 +310,6 @@ async function BrandDashboard({ userId }: { userId: string }) {
           )}
         </CardContent>
       </Card>
-
-      {brand && !brand.company_name && (
-        <div className="rounded-md border bg-muted/40 px-4 py-3 text-sm">
-          Finish setting up your brand profile.{" "}
-          <Link href="/settings" className="underline">
-            Go to profile
-          </Link>
-        </div>
-      )}
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { Palette, Building2 } from "lucide-react";
 import { getUserAndProfile } from "@/lib/auth";
@@ -26,6 +27,51 @@ export default async function OnboardingPage({
   const { role } = await searchParams;
   const preselected = role === "artist" || role === "brand" ? role : null;
 
+  // The user already picked a role on the landing page — don't re-ask.
+  if (preselected) {
+    const other = preselected === "artist" ? "brand" : "artist";
+    return (
+      <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
+        <div className="w-full max-w-md space-y-6">
+          <div className="text-center">
+            <h1 className="text-3xl font-bold text-navy">
+              You&apos;re almost in
+            </h1>
+            <p className="text-muted-foreground">
+              Just one detail to set up your{" "}
+              {preselected === "artist" ? "artist" : "brand"} account.
+            </p>
+          </div>
+
+          {preselected === "artist" ? (
+            <RoleCard
+              role="artist"
+              icon={<Palette className="size-6" />}
+              title="Artist account"
+              description="Connect Instagram, show your stats, and receive PR collab deals from brands."
+              highlight
+            />
+          ) : (
+            <RoleCard
+              role="brand"
+              icon={<Building2 className="size-6" />}
+              title="Brand account"
+              description="Browse consented makeup artists and send them PR collaboration offers."
+              highlight
+            />
+          )}
+
+          <p className="text-center text-sm text-muted-foreground">
+            Not a {preselected}?{" "}
+            <Link href={`/onboarding?role=${other}`} className="font-medium text-navy underline">
+              I&apos;m a {other}
+            </Link>
+          </p>
+        </div>
+      </main>
+    );
+  }
+
   return (
     <main className="flex flex-1 flex-col items-center justify-center px-6 py-12">
       <div className="w-full max-w-2xl space-y-6">
@@ -42,14 +88,14 @@ export default async function OnboardingPage({
             icon={<Palette className="size-6" />}
             title="I'm an artist"
             description="Connect Instagram, show your stats, and receive PR collab deals from brands."
-            highlight={preselected === "artist"}
+            highlight={false}
           />
           <RoleCard
             role="brand"
             icon={<Building2 className="size-6" />}
             title="I'm a brand"
             description="Browse consented makeup artists and send them PR collaboration offers."
-            highlight={preselected === "brand"}
+            highlight={false}
           />
         </div>
       </div>

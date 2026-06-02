@@ -12,6 +12,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DealResponseButtons } from "@/components/deal-response-buttons";
+import { EmptyState } from "@/components/empty-state";
 import {
   formatMoney,
   type Deal,
@@ -123,13 +124,12 @@ async function ArtistInbox({ userId }: { userId: string }) {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-navy">Your deals</h1>
       {deals.length === 0 ? (
-        <p className="text-muted-foreground">
-          No deals yet. Make sure you&apos;re accepting deals on your{" "}
-          <Link href="/dashboard" className="underline">
-            dashboard
-          </Link>
-          .
-        </p>
+        <EmptyState
+          emoji="📬"
+          title="Your inbox is empty — for now"
+          body="When a brand sends you a PR collab offer, it'll show up here. Make sure you're connected and accepting deals so brands can find you."
+          action={{ label: "Go to dashboard", href: "/dashboard" }}
+        />
       ) : (
         deals.map((deal) => {
           const brand = brands.get(deal.brand_id);
@@ -199,9 +199,12 @@ async function BrandSent({ userId }: { userId: string }) {
         </Button>
       </div>
       {deals.length === 0 ? (
-        <p className="text-muted-foreground">
-          You haven&apos;t sent any deals yet.
-        </p>
+        <EmptyState
+          emoji="✨"
+          title="No deals sent yet"
+          body="Browse opted-in artists and send your first PR collab offer. You'll track every response right here."
+          action={{ label: "Discover artists", href: "/discover" }}
+        />
       ) : (
         deals.map((deal) => {
           const artist = artists.get(deal.artist_id);
