@@ -23,11 +23,13 @@ Built per the build bible in
 | Auth (email/password + magic link) + role onboarding | ✅ |
 | Artist: Instagram OAuth connect, auto-filled stats, media gallery, engagement rate | ✅ |
 | Artist: profile editor, pricing (fixed/custom), accepting-deals toggle, manual refresh | ✅ |
-| Brand: profile + logo upload, Discover grid with filters, artist detail | ✅ |
-| Deals: send (brand), inbox + accept/decline (artist), status tracking | ✅ |
+| Brand: profile + logo upload, Discover (search, sort, tiers, engagement, shortlists), artist detail | ✅ |
+| Deals: send, full lifecycle (accept/decline/complete), threaded messaging + live updates | ✅ |
+| Unread badges + read tracking across the deal inbox | ✅ |
+| Email notifications (new deal, accept/decline, new message, completed) via Resend | ✅ optional |
 | Meta compliance: deauthorize + data-deletion callbacks, status page, privacy policy | ✅ |
 | Token refresh + nightly sync (Vercel Cron) | ✅ |
-| Database schema + RLS + public views | ✅ `supabase/schema.sql` |
+| Database schema + RLS + public views | ✅ `supabase/schema.sql` + `migrations/` |
 | Payments (Stripe Connect), insights scope, cold-prospect discovery | ⏳ Deferred (see SKILL §12) |
 
 ## Project layout
