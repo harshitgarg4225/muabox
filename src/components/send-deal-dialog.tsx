@@ -72,7 +72,9 @@ export function SendDealDialog({
       toast.error(
         res.reason === "message_required"
           ? "Add a message first."
-          : "Could not send deal."
+          : res.reason === "rate_limited"
+            ? "You're sending deals too fast. Try again in a minute."
+            : "Could not send deal."
       );
     }
   }

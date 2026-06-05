@@ -2,7 +2,9 @@
 
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
+import { z } from "zod";
 import { createClient } from "@/lib/supabase/server";
+import { rateLimit } from "@/lib/rate-limit";
 import {
   notifyNewDeal,
   notifyDealResponse,
@@ -10,6 +12,14 @@ import {
   notifyNewMessage,
 } from "@/lib/notify";
 import type { DealStatus } from "@/lib/types";
+
+const dealSchema = z.object({
+  artistId: z.string().uuid(),
+  message: z.string().trim().min(1).max(1000),
+  productDescription: z.string().trim().max(500).optional(),
+  currency: z.string().trim().length(3),
+  offerAmount: z.number().int().min(0).max(1_000_000_00).nullable(),
+});
 
 async function requireUser() {
   const supabase = await createClient();
@@ -23,21 +33,28 @@ async function requireUser() {
 export async function sendDeal(formData: FormData) {
   const { supabase, user } = await requireUser();
 
-  const artistId = String(formData.get("artist_id") ?? "");
-  const message = (formData.get("message") as string)?.trim() || null;
-  const productDescription =
-    (formData.get("product_description") as string)?.trim() || null;
-  const currency = ((formData.get("currency") as string) || "USD").toUpperCase();
+  const limit = rateLimit(`send-deal:${user.id}`, 20, 60_000);
+  if (!limit.ok) return { ok: false as const, reason: "rate_limited" };
 
   const amountRaw = formData.get("offer_amount");
   const amountNum = amountRaw ? Number(amountRaw) : NaN;
-  const offerAmount =
-    Number.isFinite(amountNum) && amountNum > 0
-      ? Math.round(amountNum * 100)
-      : null;
-
-  if (!artistId) throw new Error("Missing artist");
-  if (!message) return { ok: false as const, reason: "message_required" };
+  const parsed = dealSchema.safeParse({
+    artistId: String(formData.get("artist_id") ?? ""),
+    message: ((formData.get("message") as string) ?? "").trim(),
+    productDescription:
+      (formData.get("product_description") as string)?.trim() || undefined,
+    currency: ((formData.get("currency") as string) || "INR").toUpperCase(),
+    offerAmount:
+      Number.isFinite(amountNum) && amountNum > 0
+        ? Math.round(amountNum * 100)
+        : null,
+  });
+  if (!parsed.success) {
+    const isMsg = parsed.error.issues.some((i) => i.path[0] === "message");
+    return { ok: false as const, reason: isMsg ? "message_required" : "invalid" };
+  }
+  const { artistId, message, productDescription, currency, offerAmount } =
+    parsed.data;
 
   const now = new Date().toISOString();
   // RLS enforces brand_id = auth.uid() on insert. The offer is the first
@@ -99,6 +116,8 @@ export async function completeDeal(dealId: string) {
 
 export async function sendMessage(dealId: string, body: string) {
   const { supabase, user } = await requireUser();
+  const limit = rateLimit(`msg:${user.id}`, 30, 60_000);
+  if (!limit.ok) return { ok: false as const };
   const text = body.trim().slice(0, 4000); // cap length server-side
   if (!text) return { ok: false as const };
 

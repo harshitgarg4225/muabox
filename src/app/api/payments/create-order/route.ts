@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createOrder, razorpayConfigured } from "@/lib/razorpay";
+import { rateLimit } from "@/lib/rate-limit";
+import { logger } from "@/lib/logger";
 import type { Deal } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -16,8 +18,15 @@ export async function POST(req: Request) {
   } = await supabase.auth.getUser();
   if (!user) return NextResponse.json({ error: "unauthorized" }, { status: 401 });
 
+  const limit = rateLimit(`order:${user.id}`, 10, 60_000);
+  if (!limit.ok) {
+    return NextResponse.json({ error: "rate_limited" }, { status: 429 });
+  }
+
   const { dealId } = await req.json().catch(() => ({ dealId: null }));
-  if (!dealId) return NextResponse.json({ error: "bad_request" }, { status: 400 });
+  if (!dealId || typeof dealId !== "string") {
+    return NextResponse.json({ error: "bad_request" }, { status: 400 });
+  }
 
   // RLS already restricts to deals the user participates in.
   const { data: deal } = await supabase
@@ -40,6 +49,27 @@ export async function POST(req: Request) {
   const amount = deal.offer_amount;
   if (!amount || amount <= 0) {
     return NextResponse.json({ error: "no_amount" }, { status: 409 });
+  }
+
+  // Idempotency: reuse a still-open order for the same deal + amount instead of
+  // creating duplicates on double-click.
+  const { data: existing } = await supabase
+    .from("payments")
+    .select("razorpay_order_id, amount")
+    .eq("deal_id", dealId)
+    .eq("status", "created")
+    .eq("amount", amount)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+
+  if (existing) {
+    return NextResponse.json({
+      orderId: existing.razorpay_order_id,
+      amount: existing.amount,
+      currency: "INR",
+      keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+    });
   }
 
   try {
@@ -71,7 +101,8 @@ export async function POST(req: Request) {
       currency: "INR",
       keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
     });
-  } catch {
+  } catch (err) {
+    logger.error("razorpay order failed", err, { dealId });
     return NextResponse.json({ error: "order_failed" }, { status: 502 });
   }
 }
