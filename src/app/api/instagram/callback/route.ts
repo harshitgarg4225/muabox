@@ -7,6 +7,7 @@ import {
   exchangeForLongLivedToken,
   fetchProfile,
   fetchRecentMedia,
+  engagementRate,
 } from "@/lib/instagram";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +69,7 @@ export async function GET(req: Request) {
           profile_picture_url: profile.profile_picture_url ?? null,
           biography: profile.biography ?? null,
           website: profile.website ?? null,
+          engagement_rate: engagementRate(media, profile.followers_count),
           access_token_encrypted: encryptToken(long.access_token),
           token_expires_at: expiresAt,
           last_synced_at: new Date().toISOString(),

@@ -89,6 +89,18 @@ export async function updateArtistProfile(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function setEmailNotifications(value: boolean) {
+  const { supabase, user } = await requireUser();
+  // Only the email_notifications column is client-updatable on profiles.
+  const { error } = await supabase
+    .from("profiles")
+    .update({ email_notifications: value })
+    .eq("id", user.id);
+  if (error) throw error;
+  revalidatePath("/settings");
+  return { ok: true as const };
+}
+
 export async function setAccepting(value: boolean) {
   const { supabase, user } = await requireUser();
 

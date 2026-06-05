@@ -14,6 +14,7 @@ export type Profile = {
   email: string | null;
   is_admin: boolean;
   suspended: boolean;
+  email_notifications: boolean;
   created_at: string;
 };
 
@@ -140,6 +141,7 @@ export type ArtistPublicStats = {
   profile_picture_url: string | null;
   biography: string | null;
   created_at: string;
+  engagement_rate: number | null;
 };
 
 export type ArtistPublicMedia = {

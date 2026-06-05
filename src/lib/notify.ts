@@ -14,7 +14,7 @@ function enabled() {
   return !!process.env.RESEND_API_KEY && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
 }
 
-type Party = { id: string; email: string | null; name: string };
+type Party = { id: string; email: string | null; name: string; notify: boolean };
 
 async function getDealParties(dealId: string) {
   const admin = createAdminClient();
@@ -28,7 +28,7 @@ async function getDealParties(dealId: string) {
 
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, email, full_name")
+    .select("id, email, full_name, email_notifications")
     .in("id", [deal.brand_id, deal.artist_id]);
   const { data: brandRow } = await admin
     .from("brands")
@@ -42,7 +42,15 @@ async function getDealParties(dealId: string) {
     .maybeSingle();
 
   const profById = new Map(
-    (profiles ?? []).map((p) => [p.id, p as { id: string; email: string | null; full_name: string | null }])
+    (profiles ?? []).map((p) => [
+      p.id,
+      p as {
+        id: string;
+        email: string | null;
+        full_name: string | null;
+        email_notifications: boolean | null;
+      },
+    ])
   );
 
   const brand: Party = {
@@ -52,6 +60,7 @@ async function getDealParties(dealId: string) {
       brandRow?.company_name ||
       profById.get(deal.brand_id)?.full_name ||
       "A brand",
+    notify: profById.get(deal.brand_id)?.email_notifications !== false,
   };
   const artist: Party = {
     id: deal.artist_id,
@@ -60,6 +69,7 @@ async function getDealParties(dealId: string) {
       artistRow?.display_name ||
       profById.get(deal.artist_id)?.full_name ||
       "An artist",
+    notify: profById.get(deal.artist_id)?.email_notifications !== false,
   };
 
   return { deal, brand, artist };
@@ -71,6 +81,7 @@ export async function notifyNewDeal(dealId: string) {
     const parties = await getDealParties(dealId);
     if (!parties) return;
     const { deal, brand, artist } = parties;
+    if (!artist.notify) return;
     const budget =
       deal.offer_amount != null
         ? formatMoney(deal.offer_amount, deal.currency)
@@ -98,6 +109,7 @@ export async function notifyDealResponse(dealId: string, status: DealStatus) {
     const parties = await getDealParties(dealId);
     if (!parties) return;
     const { brand, artist } = parties;
+    if (!brand.notify) return;
     const accepted = status === "accepted";
     await sendEmail({
       to: brand.email,
@@ -125,6 +137,7 @@ export async function notifyDealCompleted(dealId: string, actorId: string) {
     if (!parties) return;
     const { brand, artist } = parties;
     const recipient = actorId === brand.id ? artist : brand;
+    if (!recipient.notify) return;
     await sendEmail({
       to: recipient.email,
       subject: "A deal was marked completed ✅",
@@ -146,6 +159,7 @@ export async function notifyPayment(dealId: string) {
     const parties = await getDealParties(dealId);
     if (!parties) return;
     const { deal, brand, artist } = parties;
+    if (!artist.notify) return;
     const amount =
       deal.offer_amount != null
         ? formatMoney(deal.offer_amount, deal.currency)
@@ -175,6 +189,7 @@ export async function notifyNewMessage(dealId: string, senderId: string) {
     const { brand, artist } = parties;
     const sender = senderId === brand.id ? brand : artist;
     const recipient = senderId === brand.id ? artist : brand;
+    if (!recipient.notify) return;
     await sendEmail({
       to: recipient.email,
       subject: `New message from ${sender.name}`,

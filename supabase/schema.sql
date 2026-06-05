@@ -11,6 +11,7 @@ create table profiles (
   email text,
   is_admin boolean default false,
   suspended boolean default false,
+  email_notifications boolean default true,
   created_at timestamptz default now()
 );
 
@@ -43,6 +44,7 @@ create table instagram_accounts (
   profile_picture_url text,
   biography text,
   website text,
+  engagement_rate numeric,                 -- derived; refreshed on connect/sync
   access_token_encrypted text not null,   -- encrypted; NEVER sent to client
   token_expires_at timestamptz,
   last_synced_at timestamptz,
@@ -160,6 +162,8 @@ create policy "own profile" on profiles for all using (auth.uid() = id);
 -- is_admin/suspended); admin/moderation writes use the service role.
 revoke update on profiles from authenticated;
 revoke update on profiles from anon;
+-- ...except their own email notification preference (single safe column).
+grant update (email_notifications) on profiles to authenticated;
 
 -- artists: owner full access; anyone authenticated can READ artists who are accepting deals
 create policy "artist owner" on artists for all using (auth.uid() = id);
@@ -234,7 +238,8 @@ select a.id as artist_id, a.display_name, a.bio, a.location, a.accepting_deals,
        a.pricing, a.price_min, a.price_max, a.currency,
        ia.username, ia.followers_count, ia.media_count, ia.profile_picture_url,
        ia.biography,
-       a.created_at
+       a.created_at,
+       ia.engagement_rate
 from artists a
 join instagram_accounts ia on ia.artist_id = a.id
 where a.accepting_deals = true;

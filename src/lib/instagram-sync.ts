@@ -4,6 +4,7 @@ import {
   fetchProfile,
   fetchRecentMedia,
   refreshLongLivedToken,
+  engagementRate,
   InstagramError,
   type IgMedia,
 } from "@/lib/instagram";
@@ -85,6 +86,7 @@ export async function syncAccount(
       profile_picture_url: profile.profile_picture_url ?? null,
       biography: profile.biography ?? null,
       website: profile.website ?? null,
+      engagement_rate: engagementRate(media, profile.followers_count),
       last_synced_at: new Date().toISOString(),
     });
 
