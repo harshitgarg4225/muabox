@@ -1,0 +1,24 @@
+name: Instagram nightly sync
+
+# Host-agnostic replacement for Vercel Cron (vercel.json). Pings the protected
+# sync endpoint once a night. Works on Railway or any host.
+# Requires two repo secrets:
+#   APP_URL     = https://your-app.up.railway.app   (no trailing slash)
+#   CRON_SECRET = same value as the app's CRON_SECRET env var
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger Instagram sync
+        run: |
+          if [ -z "${{ secrets.APP_URL }}" ] || [ -z "${{ secrets.CRON_SECRET }}" ]; then
+            echo "APP_URL / CRON_SECRET secrets not set — skipping."
+            exit 0
+          fi
+          curl -fsS -X GET "${{ secrets.APP_URL }}/api/cron/sync-instagram" \
+            -H "Authorization: Bearer ${{ secrets.CRON_SECRET }}"
