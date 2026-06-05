@@ -174,6 +174,30 @@ Open http://localhost:3000.
    `Authorization: Bearer $CRON_SECRET` automatically — set `CRON_SECRET`.
 4. Update the three Meta callback URLs to the production domain.
 
+## Deploy (Railway)
+
+Railway hosts the Next.js server directly (you still use **Supabase** for the
+database/auth/storage). Nixpacks auto-detects Next.js — no Dockerfile needed.
+
+1. **New Project → Deploy from GitHub repo**, pick this repo. Railway runs
+   `npm ci && npm run build` and starts it with `npm start` (Next honours
+   Railway's `$PORT` automatically).
+2. **Variables** — add everything from `.env.example`. Set `NEXT_PUBLIC_APP_URL`
+   and `INSTAGRAM_REDIRECT_URI` to your Railway URL once it's generated
+   (Settings → Networking → Generate Domain gives an HTTPS `*.up.railway.app`).
+   > `NEXT_PUBLIC_*` vars are baked in at build time — set them before the first
+   > build (Railway injects service variables into the Nixpacks build).
+3. **Nightly Instagram sync** — `vercel.json` cron is Vercel-only. Instead use
+   the included GitHub Actions workflow (`.github/workflows/instagram-sync.yml`):
+   add repo secrets `APP_URL` (your Railway URL) and `CRON_SECRET` (matching the
+   app env). It pings `/api/cron/sync-instagram` nightly. (Or use a Railway Cron
+   service running `curl` to the same endpoint.)
+4. Point the Meta callback URLs and the Razorpay webhook URL at the Railway
+   domain. Optionally set Railway's healthcheck path to `/api/health`.
+
+Any other Node host (Render, Fly.io, a VPS) works the same way: `npm run build`
+then `npm start`, with the GitHub Actions cron for the nightly sync.
+
 ## Security notes
 
 - Instagram access tokens are AES-256-GCM encrypted (`lib/crypto.ts`) and live
