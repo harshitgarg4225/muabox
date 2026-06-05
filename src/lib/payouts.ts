@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createTransfer, routeConfigured } from "@/lib/razorpay-route";
+import { logger } from "@/lib/logger";
 import type { Payment } from "@/lib/types";
 
 /** Platform commission withheld from each artist payout (percent). */
@@ -59,7 +60,11 @@ export async function attemptTransfer(
         updated_at: new Date().toISOString(),
       })
       .eq("id", payment.id);
-  } catch {
+  } catch (err) {
+    logger.error("route transfer failed", err, {
+      paymentId: payment.id,
+      dealId: payment.deal_id,
+    });
     await admin
       .from("payments")
       .update({ transfer_status: "failed", updated_at: new Date().toISOString() })

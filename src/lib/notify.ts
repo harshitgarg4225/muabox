@@ -1,6 +1,7 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, emailLayout, esc } from "@/lib/email";
+import { logger } from "@/lib/logger";
 import { formatMoney, type DealStatus } from "@/lib/types";
 
 /**
@@ -85,8 +86,8 @@ export async function notifyNewDeal(dealId: string) {
         footnote: "Reply, accept, or decline right from the deal page.",
       }),
     });
-  } catch {
-    /* never block the user action */
+  } catch (err) {
+    logger.error("notification email failed", err);
   }
 }
 
@@ -112,8 +113,8 @@ export async function notifyDealResponse(dealId: string, status: DealStatus) {
         ctaPath: accepted ? `/deals/${dealId}` : "/discover",
       }),
     });
-  } catch {
-    /* noop */
+  } catch (err) {
+    logger.error("notification email failed", err);
   }
 }
 
@@ -134,8 +135,8 @@ export async function notifyDealCompleted(dealId: string, actorId: string) {
         ctaPath: `/deals/${dealId}`,
       }),
     });
-  } catch {
-    /* noop */
+  } catch (err) {
+    logger.error("notification email failed", err);
   }
 }
 
@@ -161,8 +162,8 @@ export async function notifyPayment(dealId: string) {
           "Payments are processed securely via Razorpay. Payout to your account follows your payout setup.",
       }),
     });
-  } catch {
-    /* noop */
+  } catch (err) {
+    logger.error("notification email failed", err);
   }
 }
 
@@ -184,7 +185,7 @@ export async function notifyNewMessage(dealId: string, senderId: string) {
         ctaPath: `/deals/${dealId}`,
       }),
     });
-  } catch {
-    /* noop */
+  } catch (err) {
+    logger.error("notification email failed", err);
   }
 }
