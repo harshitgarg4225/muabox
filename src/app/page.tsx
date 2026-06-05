@@ -108,7 +108,7 @@ export default function Home() {
               <div className="flex size-12 items-center justify-center rounded-2xl bg-navy text-white shadow-soft">
                 <Icon className="size-6" />
               </div>
-              <div className="mt-4 text-sm font-semibold text-yellow-600">
+              <div className="mt-4 text-sm font-semibold text-amber-700">
                 STEP {step}
               </div>
               <h3 className="mt-1 text-xl font-semibold text-navy">{title}</h3>
@@ -240,7 +240,7 @@ function PreviewCard({
           <div className="truncate text-xs text-muted-foreground">{meta}</div>
         </div>
       </div>
-      <span className="mt-3 inline-flex rounded-full bg-yellow/20 px-2.5 py-1 text-xs font-medium text-yellow-600">
+      <span className="mt-3 inline-flex rounded-full bg-yellow/20 px-2.5 py-1 text-xs font-medium text-amber-700">
         {tag}
       </span>
     </div>
@@ -264,7 +264,7 @@ function AudienceCard({
 }) {
   return (
     <div className="flex flex-col rounded-3xl border bg-card p-8 shadow-soft">
-      <div className="text-sm font-semibold text-yellow-600">{kind}</div>
+      <div className="text-sm font-semibold text-amber-700">{kind}</div>
       <h3 className="mt-1 text-2xl font-bold text-navy">{title}</h3>
       <ul className="mt-5 flex-1 space-y-3">
         {points.map((p) => (

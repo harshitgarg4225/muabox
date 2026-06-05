@@ -30,7 +30,9 @@ Built per the build bible in
 | Payments: brand pays an accepted deal via Razorpay (Orders + Checkout + signature/webhook), INR | ✅ optional |
 | Artist payouts: Razorpay Route linked accounts + KYC/bank onboarding + auto transfer on capture (configurable platform fee) | ✅ optional |
 | Admin dashboard: overview/observability, user moderation (suspend, grant admin), deals & payments browsers | ✅ |
-| Cursor pagination on the deals inbox + all admin lists | ✅ |
+| Cursor pagination on the deals inbox + all admin lists; DB-side Discover ranking | ✅ |
+| Auth: password reset, in-app account deletion, email notification preferences | ✅ |
+| Quality: Vitest unit suite, GitHub Actions CI, CSP + security headers, rate limiting, structured logging, 0 npm vulns | ✅ |
 | Meta compliance: deauthorize + data-deletion callbacks, status page, privacy policy | ✅ |
 | Token refresh + nightly sync (Vercel Cron) | ✅ |
 | Database schema + RLS + public views | ✅ `supabase/schema.sql` + `migrations/` |
@@ -87,7 +89,8 @@ npm install
    [`supabase/migrations/`](supabase/migrations) in order — `0002` adds brand
    shortlists + the discover sort, `0003` adds deal messaging, read tracking and
    live updates, `0004` adds Razorpay payments + INR defaults, `0005` adds
-   artist payouts (Razorpay Route), `0006` adds admin + moderation flags.)
+   artist payouts (Razorpay Route), `0006` adds admin + moderation flags,
+   `0007` adds stored engagement + email preferences.)
 3. Storage → create a **public** bucket named `logos` (for brand logos).
 4. Auth → for easy local testing, disable "Confirm email" (Auth → Providers →
    Email) so password sign-up logs you straight in.

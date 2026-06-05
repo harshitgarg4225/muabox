@@ -9,7 +9,7 @@ const STATUS_META: Record<
     className?: string;
   }
 > = {
-  sent: { label: "New", variant: "secondary", className: "bg-yellow/20 text-yellow-600" },
+  sent: { label: "New", variant: "secondary", className: "bg-yellow/20 text-amber-700" },
   viewed: { label: "Viewed", variant: "outline" },
   accepted: { label: "Accepted", variant: "default", className: "bg-emerald-600 text-white" },
   declined: { label: "Declined", variant: "destructive" },

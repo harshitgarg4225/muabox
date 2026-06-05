@@ -98,7 +98,7 @@ export function PayoutOnboardingForm({
                 ? "bg-emerald-500/10 text-emerald-700"
                 : account.status === "failed"
                   ? "bg-destructive/10 text-destructive"
-                  : "bg-yellow/15 text-yellow-600"
+                  : "bg-yellow/15 text-amber-700"
             }`}
           >
             {active ? (
