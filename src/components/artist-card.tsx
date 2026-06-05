@@ -4,11 +4,7 @@ import { MapPin, TrendingUp, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SaveArtistButton } from "@/components/save-artist-button";
 import { formatMoney, type ArtistPublicStats } from "@/lib/types";
-
-function compact(n: number | null) {
-  if (n == null) return "—";
-  return Intl.NumberFormat("en-US", { notation: "compact" }).format(n);
-}
+import { compact } from "@/lib/format";
 
 export type DiscoverArtist = ArtistPublicStats & {
   engagement: number;

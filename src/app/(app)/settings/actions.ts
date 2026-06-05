@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/action-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 import {
@@ -48,15 +48,6 @@ const payoutSchema = z.object({
   state: z.string().trim().min(1).max(60),
   postal_code: z.string().trim().min(4).max(10),
 });
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-  return { supabase, user };
-}
 
 export async function updateArtistProfile(formData: FormData) {
   const { supabase, user } = await requireUser();

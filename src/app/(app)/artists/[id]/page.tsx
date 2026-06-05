@@ -16,6 +16,7 @@ import { MediaGallery } from "@/components/profile-stats";
 import { SendDealDialog } from "@/components/send-deal-dialog";
 import { SaveArtistButton } from "@/components/save-artist-button";
 import { engagementRate } from "@/lib/instagram";
+import { compact } from "@/lib/format";
 import {
   formatMoney,
   type ArtistPublicStats,
@@ -32,11 +33,6 @@ const DEAL_STATUS_LABEL: Record<string, string> = {
 };
 
 export const dynamic = "force-dynamic";
-
-function compact(n: number | null) {
-  if (n == null) return "—";
-  return Intl.NumberFormat("en-US", { notation: "compact" }).format(n);
-}
 
 export default async function ArtistDetailPage({
   params,

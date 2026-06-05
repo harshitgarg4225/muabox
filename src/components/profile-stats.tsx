@@ -1,11 +1,7 @@
 import Image from "next/image";
 import type { InstagramAccount, InstagramMedia } from "@/lib/types";
 import { engagementRate } from "@/lib/instagram";
-
-function compact(n: number | null | undefined) {
-  if (n == null) return "—";
-  return Intl.NumberFormat("en-US", { notation: "compact" }).format(n);
-}
+import { compact } from "@/lib/format";
 
 export function StatGrid({
   account,

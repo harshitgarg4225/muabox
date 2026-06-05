@@ -1,15 +1,11 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/action-auth";
 
 /** Toggle an artist on/off the brand's shortlist. Returns the new saved state. */
 export async function toggleSaved(artistId: string) {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
+  const { supabase, user } = await requireUser();
 
   const { data: existing } = await supabase
     .from("saved_artists")

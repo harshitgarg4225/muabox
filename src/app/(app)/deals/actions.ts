@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
-import { createClient } from "@/lib/supabase/server";
+import { requireUser } from "@/lib/action-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import {
   notifyNewDeal,
@@ -20,15 +20,6 @@ const dealSchema = z.object({
   currency: z.string().trim().length(3),
   offerAmount: z.number().int().min(0).max(1_000_000_00).nullable(),
 });
-
-async function requireUser() {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-  if (!user) throw new Error("Not authenticated");
-  return { supabase, user };
-}
 
 export async function sendDeal(formData: FormData) {
   const { supabase, user } = await requireUser();
