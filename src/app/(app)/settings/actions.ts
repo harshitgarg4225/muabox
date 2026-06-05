@@ -1,8 +1,10 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { logger } from "@/lib/logger";
 import {
   routeConfigured,
   createLinkedAccount,
@@ -216,6 +218,24 @@ export async function savePayoutAccount(formData: FormData) {
       reason: err instanceof Error ? err.message : "failed",
     };
   }
+}
+
+/**
+ * Permanently delete the signed-in user's account. Deleting the auth user
+ * cascades to profiles → artists/brands → deals/messages/payments/etc.
+ */
+export async function deleteAccount() {
+  const { supabase, user } = await requireUser();
+  try {
+    const admin = createAdminClient();
+    const { error } = await admin.auth.admin.deleteUser(user.id);
+    if (error) throw error;
+  } catch (err) {
+    logger.error("account deletion failed", err, { userId: user.id });
+    throw new Error("Could not delete account. Please contact support.");
+  }
+  await supabase.auth.signOut();
+  redirect("/");
 }
 
 export async function updateBrandProfile(formData: FormData) {

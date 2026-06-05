@@ -148,17 +148,27 @@ export function LoginForm() {
           >
             Email me a magic link
           </Button>
-          <button
-            type="button"
-            className="text-sm text-muted-foreground hover:underline"
-            onClick={() =>
-              setMode((m) => (m === "signup" ? "signin" : "signup"))
-            }
-          >
-            {mode === "signup"
-              ? "Already have an account? Log in"
-              : "Need an account? Sign up"}
-          </button>
+          <div className="flex items-center gap-3 text-sm">
+            <button
+              type="button"
+              className="text-muted-foreground hover:underline"
+              onClick={() =>
+                setMode((m) => (m === "signup" ? "signin" : "signup"))
+              }
+            >
+              {mode === "signup"
+                ? "Already have an account? Log in"
+                : "Need an account? Sign up"}
+            </button>
+            {mode === "signin" && (
+              <>
+                <span className="text-muted-foreground">·</span>
+                <a href="/forgot-password" className="text-muted-foreground hover:underline">
+                  Forgot password?
+                </a>
+              </>
+            )}
+          </div>
           <p className="text-center text-xs text-muted-foreground">
             By continuing you agree to our{" "}
             <a href="/terms" className="underline">

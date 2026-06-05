@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { ArtistSettingsForm } from "@/components/artist-settings-form";
 import { BrandSettingsForm } from "@/components/brand-settings-form";
 import { PayoutOnboardingForm } from "@/components/payout-onboarding-form";
+import { DeleteAccountSection } from "@/components/delete-account-section";
 import { routeConfigured } from "@/lib/razorpay-route";
 import type { Artist, Brand, ArtistPayoutAccount } from "@/lib/types";
 
@@ -34,6 +35,7 @@ export default async function SettingsPage() {
         <h1 className="text-2xl font-bold text-navy">Profile &amp; pricing</h1>
         <ArtistSettingsForm artist={artist} />
         <PayoutOnboardingForm account={payout ?? null} configured={routeConfigured()} />
+        <DeleteAccountSection />
       </div>
     );
   }
@@ -49,6 +51,7 @@ export default async function SettingsPage() {
     <div className="space-y-6">
       <h1 className="text-2xl font-bold text-navy">Brand profile</h1>
       <BrandSettingsForm brand={brand} userId={user.id} />
+      <DeleteAccountSection />
     </div>
   );
 }
