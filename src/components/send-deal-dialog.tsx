@@ -37,13 +37,16 @@ export function SendDealDialog({
   defaultCurrency = "INR",
   pricingHint,
   alreadySent = false,
+  campaigns = [],
 }: {
   artistId: string;
   artistName: string;
   defaultCurrency?: string;
   pricingHint?: string;
   alreadySent?: boolean;
+  campaigns?: { id: string; name: string }[];
 }) {
+  const [campaignId, setCampaignId] = useState("");
   const router = useRouter();
   const [open, setOpen] = useState(false);
   const {
@@ -59,6 +62,7 @@ export function SendDealDialog({
   async function onSubmit(values: FormValues) {
     const fd = new FormData();
     fd.set("artist_id", artistId);
+    if (campaignId) fd.set("campaign_id", campaignId);
     Object.entries(values).forEach(([k, v]) => {
       if (v != null && v !== "") fd.set(k, String(v));
     });
@@ -125,6 +129,24 @@ export function SendDealDialog({
                 {...register("product_description")}
               />
             </div>
+            {campaigns.length > 0 && (
+              <div className="space-y-2">
+                <Label htmlFor="deal-campaign">Campaign (optional)</Label>
+                <select
+                  id="deal-campaign"
+                  value={campaignId}
+                  onChange={(e) => setCampaignId(e.target.value)}
+                  className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
+                >
+                  <option value="">No campaign</option>
+                  {campaigns.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
             <div className="grid grid-cols-3 gap-3">
               <div className="col-span-2 space-y-2">
                 <Label htmlFor="offer_amount">Budget (optional)</Label>

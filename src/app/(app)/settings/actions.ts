@@ -12,6 +12,7 @@ import {
   configureSettlements,
 } from "@/lib/razorpay-route";
 import { reconcilePendingTransfers } from "@/lib/payouts";
+import { parseSpecialties } from "@/lib/specialties";
 import { z } from "zod";
 import type { PricingModel } from "@/lib/types";
 
@@ -71,6 +72,7 @@ export async function updateArtistProfile(formData: FormData) {
       fields.pricing === "fixed" ? toCents(formData.get("price_min")) : null,
     price_max:
       fields.pricing === "fixed" ? toCents(formData.get("price_max")) : null,
+    specialties: parseSpecialties(formData.get("specialties") as string),
   };
 
   const { error } = await supabase.from("artists").update(update).eq("id", user.id);
@@ -86,6 +88,17 @@ export async function setEmailNotifications(value: boolean) {
   const { error } = await supabase
     .from("profiles")
     .update({ email_notifications: value })
+    .eq("id", user.id);
+  if (error) throw error;
+  revalidatePath("/settings");
+  return { ok: true as const };
+}
+
+export async function setOpenToPitches(value: boolean) {
+  const { supabase, user } = await requireUser();
+  const { error } = await supabase
+    .from("brands")
+    .update({ open_to_pitches: value })
     .eq("id", user.id);
   if (error) throw error;
   revalidatePath("/settings");

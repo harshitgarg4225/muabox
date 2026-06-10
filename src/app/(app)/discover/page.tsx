@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/empty-state";
 import { ArtistCard, type DiscoverArtist } from "@/components/artist-card";
 import { CursorPager } from "@/components/cursor-pager";
+import { SPECIALTIES } from "@/lib/specialties";
 import type {
   ArtistPublicStats,
   ArtistPublicMedia,
@@ -47,13 +48,14 @@ export default async function DiscoverPage({
     sort?: string;
     saved?: string;
     before?: string;
+    specialty?: string;
   }>;
 }) {
   const { user, profile } = await getUserAndProfile();
   if (!user || !profile) redirect("/login");
   if (profile.role !== "brand") redirect("/dashboard");
 
-  const { q, location, tier, pricing, min_eng, sort, saved, before } =
+  const { q, location, tier, pricing, min_eng, sort, saved, before, specialty } =
     await searchParams;
 
   const supabase = await createClient();
@@ -90,6 +92,9 @@ export default async function DiscoverPage({
   }
   if (min_eng && Number(min_eng) > 0) {
     query = query.gte("engagement_rate", Number(min_eng));
+  }
+  if (specialty && (SPECIALTIES as readonly string[]).includes(specialty)) {
+    query = query.contains("specialties", [specialty]);
   }
   if (saved) {
     const ids = [...savedSet];
@@ -156,8 +161,10 @@ export default async function DiscoverPage({
     dealStatus: dealStatusByArtist.get(a.artist_id) ?? null,
   }));
 
-  const hasFilters = !!(q || location || tier || pricing || min_eng || saved);
-  const pagerParams = { q, location, tier, pricing, min_eng, sort, saved };
+  const hasFilters = !!(
+    q || location || tier || pricing || min_eng || saved || specialty
+  );
+  const pagerParams = { q, location, tier, pricing, min_eng, sort, saved, specialty };
 
   return (
     <div className="space-y-6">
@@ -179,7 +186,7 @@ export default async function DiscoverPage({
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input name="q" defaultValue={q} placeholder="Search by name or @username" className="pl-9" />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
           <div className="space-y-1">
             <Label htmlFor="location">Location</Label>
             <Input id="location" name="location" defaultValue={location} placeholder="Any" />
@@ -192,6 +199,17 @@ export default async function DiscoverPage({
               <option value="micro">Micro · 10K–100K</option>
               <option value="mid">Mid · 100K–500K</option>
               <option value="macro">Macro · 500K+</option>
+            </select>
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="specialty">Specialty</Label>
+            <select id="specialty" name="specialty" defaultValue={specialty ?? ""} className={selectClass}>
+              <option value="">Any niche</option>
+              {SPECIALTIES.map((sp) => (
+                <option key={sp} value={sp}>
+                  {sp}
+                </option>
+              ))}
             </select>
           </div>
           <div className="space-y-1">

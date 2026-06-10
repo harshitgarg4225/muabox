@@ -78,6 +78,14 @@ export default async function ArtistDetailPage({
     .eq("artist_id", id)
     .maybeSingle();
 
+  const { data: campaignRows } = await supabase
+    .from("campaigns")
+    .select("id, name")
+    .eq("brand_id", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+  const campaigns = (campaignRows as { id: string; name: string }[]) ?? [];
+
   const er = engagementRate(media, artist.followers_count);
 
   const pricingHint =
@@ -139,9 +147,10 @@ export default async function ArtistDetailPage({
             <SendDealDialog
               artistId={artist.artist_id}
               artistName={artist.display_name ?? artist.username ?? "this artist"}
-              defaultCurrency={artist.currency ?? "USD"}
+              defaultCurrency={artist.currency ?? "INR"}
               pricingHint={pricingHint}
               alreadySent={!!existingDeal}
+              campaigns={campaigns}
             />
           </div>
         </CardHeader>
@@ -159,6 +168,15 @@ export default async function ArtistDetailPage({
             </div>
           )}
           {artist.bio && <p className="text-sm">{artist.bio}</p>}
+          {artist.specialties?.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {artist.specialties.map((sp) => (
+                <Badge key={sp} variant="secondary">
+                  {sp}
+                </Badge>
+              ))}
+            </div>
+          )}
           <div className="grid grid-cols-3 gap-3">
             {stats.map((s) => (
               <div

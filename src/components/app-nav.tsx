@@ -9,6 +9,8 @@ import {
   Compass,
   Inbox,
   UserRound,
+  Target,
+  Store,
   type LucideIcon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -34,12 +36,14 @@ export function AppNav({
   const links: NavLink[] = isArtist
     ? [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
+        { href: "/brands", label: "Brands", icon: Store, badge: 0 },
         { href: "/deals", label: "Deals", icon: Inbox, badge: dealsUnread },
         { href: "/settings", label: "Profile", icon: UserRound, badge: 0 },
       ]
     : [
         { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard, badge: 0 },
         { href: "/discover", label: "Discover", icon: Compass, badge: 0 },
+        { href: "/campaigns", label: "Campaigns", icon: Target, badge: 0 },
         { href: "/deals", label: "Deals", icon: Inbox, badge: dealsUnread },
         { href: "/settings", label: "Profile", icon: UserRound, badge: 0 },
       ];

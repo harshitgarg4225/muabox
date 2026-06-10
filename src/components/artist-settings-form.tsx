@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useForm, useWatch } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -23,6 +24,8 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { updateArtistProfile } from "@/app/(app)/settings/actions";
+import { SPECIALTIES } from "@/lib/specialties";
+import { cn } from "@/lib/utils";
 import type { Artist } from "@/lib/types";
 
 const schema = z
@@ -67,12 +70,22 @@ export function ArtistSettingsForm({ artist }: { artist: Artist }) {
   });
 
   const pricing = useWatch({ control, name: "pricing" });
+  const [specialties, setSpecialties] = useState<string[]>(
+    artist.specialties ?? []
+  );
+
+  function toggleSpecialty(sp: string) {
+    setSpecialties((cur) =>
+      cur.includes(sp) ? cur.filter((x) => x !== sp) : [...cur, sp]
+    );
+  }
 
   async function onSubmit(values: FormValues) {
     const fd = new FormData();
     Object.entries(values).forEach(([k, v]) => {
       if (v != null && v !== "") fd.set(k, String(v));
     });
+    fd.set("specialties", specialties.join(","));
     try {
       await updateArtistProfile(fd);
       toast.success("Profile saved.");
@@ -106,6 +119,31 @@ export function ArtistSettingsForm({ artist }: { artist: Artist }) {
           <div className="space-y-2">
             <Label htmlFor="bio">Bio</Label>
             <Textarea id="bio" rows={4} {...register("bio")} />
+          </div>
+          <div className="space-y-2">
+            <Label>Specialties</Label>
+            <p className="text-sm text-muted-foreground">
+              Pick your luxury niches — brands filter and target campaigns by
+              these.
+            </p>
+            <div className="flex flex-wrap gap-2">
+              {SPECIALTIES.map((sp) => (
+                <button
+                  key={sp}
+                  type="button"
+                  onClick={() => toggleSpecialty(sp)}
+                  aria-pressed={specialties.includes(sp)}
+                  className={cn(
+                    "rounded-full border px-3 py-1 text-sm transition-colors",
+                    specialties.includes(sp)
+                      ? "border-navy bg-navy text-white"
+                      : "text-muted-foreground hover:border-navy hover:text-navy"
+                  )}
+                >
+                  {sp}
+                </button>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>

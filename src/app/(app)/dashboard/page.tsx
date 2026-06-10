@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Camera, Inbox, Send, ExternalLink } from "lucide-react";
+import { Camera, Inbox, Send, ExternalLink, Sparkles } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getUserAndProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -16,12 +16,13 @@ import { RefreshStatsButton } from "@/components/refresh-stats-button";
 import { StatGrid, MediaGallery, IgHeader } from "@/components/profile-stats";
 import { GettingStarted } from "@/components/getting-started";
 import { EmptyState } from "@/components/empty-state";
-import type {
-  Artist,
-  Brand,
-  Deal,
-  InstagramAccount,
-  InstagramMedia,
+import {
+  formatMoney,
+  type Artist,
+  type Brand,
+  type Deal,
+  type InstagramAccount,
+  type InstagramMedia,
 } from "@/lib/types";
 
 export default async function DashboardPage({
@@ -104,6 +105,19 @@ async function ArtistDashboard({
   const profileComplete = !!(artist?.bio || artist?.location);
   const accepting = !!artist?.accepting_deals;
 
+  // "What you've done so far": received / accepted / earned.
+  const { data: dealAgg } = await supabase
+    .from("deals")
+    .select("status, offer_amount, paid_at, initiated_by")
+    .eq("artist_id", userId);
+  const received = (dealAgg ?? []).filter((d) => d.initiated_by === "brand").length;
+  const acceptedCount = (dealAgg ?? []).filter(
+    (d) => d.status === "accepted" || d.status === "completed"
+  ).length;
+  const earned = (dealAgg ?? [])
+    .filter((d) => d.paid_at)
+    .reduce((s, d) => s + (d.offer_amount ?? 0), 0);
+
   return (
     <div className="space-y-6">
       <Banner connected={flags.connected} igError={flags.ig_error} />
@@ -144,6 +158,40 @@ async function ArtistDashboard({
           },
         ]}
       />
+
+      <div className="grid gap-4 sm:grid-cols-3">
+        <SummaryCard label="Offers received" value={received} icon={<Inbox />} />
+        <SummaryCard label="Collabs accepted" value={acceptedCount} icon={<Send />} />
+        <Card>
+          <CardContent className="flex items-center justify-between">
+            <div>
+              <div className="text-2xl font-bold text-navy">
+                {formatMoney(earned, "INR")}
+              </div>
+              <div className="text-sm text-muted-foreground">Earned so far</div>
+            </div>
+            <div className="text-muted-foreground">
+              <Sparkles />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardContent className="flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <div className="font-semibold text-navy">
+              Don&apos;t wait to be found
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Browse the brands on Muabox and pitch the ones that fit your craft.
+            </p>
+          </div>
+          <Button asChild variant="accent">
+            <Link href="/brands">Browse brands</Link>
+          </Button>
+        </CardContent>
+      </Card>
 
       {!account ? (
         <Card>
@@ -248,6 +296,11 @@ async function BrandDashboard({ userId }: { userId: string }) {
     (brand?.website || brand?.description || brand?.logo_url)
   );
 
+  const { count: campaignCount } = await supabase
+    .from("campaigns")
+    .select("id", { count: "exact", head: true })
+    .eq("brand_id", userId);
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -271,6 +324,13 @@ async function BrandDashboard({ userId }: { userId: string }) {
             cta: { label: "Edit profile", href: "/settings" },
           },
           {
+            title: "Create a campaign",
+            description:
+              "Set a budget and a brief so every invite and rupee is tracked.",
+            done: (campaignCount ?? 0) > 0,
+            cta: { label: "New campaign", href: "/campaigns" },
+          },
+          {
             title: "Send your first deal",
             description:
               "Find an artist who fits your launch and send a PR collab offer.",
@@ -280,7 +340,7 @@ async function BrandDashboard({ userId }: { userId: string }) {
         ]}
       />
 
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
         <SummaryCard label="Deals sent" value={sent.length} icon={<Send />} />
         <SummaryCard label="Awaiting reply" value={byStatus.open} icon={<Inbox />} />
         <SummaryCard
@@ -288,6 +348,13 @@ async function BrandDashboard({ userId }: { userId: string }) {
           value={byStatus.accepted}
           icon={<Send />}
         />
+        <Link href="/campaigns">
+          <SummaryCard
+            label="Campaigns"
+            value={campaignCount ?? 0}
+            icon={<Sparkles />}
+          />
+        </Link>
       </div>
 
       <Card>

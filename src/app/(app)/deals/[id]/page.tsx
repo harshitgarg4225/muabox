@@ -12,10 +12,12 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { DealStatusBadge } from "@/components/deal-status-badge";
 import { DealActions } from "@/components/deal-actions";
 import { DealThread } from "@/components/deal-thread";
 import { PayDealButton } from "@/components/pay-deal-button";
+import { RemindButton } from "@/components/remind-button";
 import {
   formatMoney,
   type Deal,
@@ -54,13 +56,14 @@ export default async function DealDetailPage({
     .eq("deal_id", id)
     .order("created_at", { ascending: true });
 
-  // The original offer note reads as the brand's opening message.
+  // The original offer/pitch note reads as the initiator's opening message.
+  const isPitch = deal.initiated_by === "artist";
   const opening: DealMessage[] = deal.message
     ? [
         {
           id: `offer-${deal.id}`,
           deal_id: deal.id,
-          sender_id: deal.brand_id,
+          sender_id: isPitch ? deal.artist_id : deal.brand_id,
           body: deal.message,
           created_at: deal.created_at,
         },
@@ -77,6 +80,17 @@ export default async function DealDetailPage({
       .eq("artist_id", user.id)
       .maybeSingle();
     artistPayoutActive = pa?.status === "active";
+  }
+
+  // Campaign context, if this deal belongs to one.
+  let campaignName: string | null = null;
+  if (deal.campaign_id) {
+    const { data: c } = await supabase
+      .from("campaigns")
+      .select("name")
+      .eq("id", deal.campaign_id)
+      .maybeSingle();
+    campaignName = c?.name ?? null;
   }
 
   // Resolve the counterparty (public view; no sensitive data).
@@ -141,13 +155,25 @@ export default async function DealDetailPage({
                 )}
               </CardTitle>
               <p className="text-sm text-muted-foreground">
-                {profile.role === "artist"
-                  ? "sent you a collab offer"
-                  : "your collab offer"}
+                {isPitch
+                  ? profile.role === "brand"
+                    ? "pitched you a collaboration"
+                    : "your pitch"
+                  : profile.role === "artist"
+                    ? "sent you a collab offer"
+                    : "your collab offer"}
               </p>
+              {campaignName && (
+                <p className="text-xs text-muted-foreground">
+                  Campaign: {campaignName}
+                </p>
+              )}
             </div>
           </div>
-          <DealStatusBadge status={deal.status} />
+          <div className="flex items-center gap-2">
+            {isPitch && <Badge variant="outline">Pitch</Badge>}
+            <DealStatusBadge status={deal.status} />
+          </div>
         </CardHeader>
 
         <CardContent className="space-y-4">
@@ -191,7 +217,13 @@ export default async function DealDetailPage({
               dealId={deal.id}
               role={profile.role}
               status={deal.status}
+              initiatedBy={deal.initiated_by}
             />
+            {profile.role === "brand" &&
+              !isPitch &&
+              (deal.status === "sent" || deal.status === "viewed") && (
+                <RemindButton dealId={deal.id} remindedAt={deal.reminded_at} />
+              )}
             {profile.role === "brand" &&
               !deal.paid_at &&
               (deal.status === "accepted" || deal.status === "completed") &&

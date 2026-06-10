@@ -21,7 +21,7 @@ async function getDealParties(dealId: string) {
 
   const { data: deal } = await admin
     .from("deals")
-    .select("id, brand_id, artist_id, offer_amount, currency, status")
+    .select("id, brand_id, artist_id, offer_amount, currency, status, initiated_by")
     .eq("id", dealId)
     .maybeSingle();
   if (!deal) return null;
@@ -108,21 +108,28 @@ export async function notifyDealResponse(dealId: string, status: DealStatus) {
   try {
     const parties = await getDealParties(dealId);
     if (!parties) return;
-    const { brand, artist } = parties;
-    if (!brand.notify) return;
+    const { deal, brand, artist } = parties;
+    // The initiator gets notified of the receiver's response.
+    const isPitch = deal.initiated_by === "artist";
+    const recipient = isPitch ? artist : brand;
+    const responder = isPitch ? brand : artist;
+    if (!recipient.notify) return;
     const accepted = status === "accepted";
+    const thing = isPitch ? "pitch" : "deal";
     await sendEmail({
-      to: brand.email,
+      to: recipient.email,
       subject: accepted
-        ? `${artist.name} accepted your deal 🎉`
-        : `${artist.name} responded to your deal`,
+        ? `${responder.name} accepted your ${thing} 🎉`
+        : `${responder.name} responded to your ${thing}`,
       html: emailLayout({
-        heading: accepted ? "Your deal was accepted!" : "Your deal was declined",
+        heading: accepted
+          ? `Your ${thing} was accepted!`
+          : `Your ${thing} was declined`,
         intro: accepted
-          ? `<strong>${esc(artist.name)}</strong> accepted your collab offer. Open the deal to coordinate the details.`
-          : `<strong>${esc(artist.name)}</strong> declined your collab offer this time. Browse more artists who fit your launch.`,
-        ctaText: accepted ? "Open the deal" : "Discover artists",
-        ctaPath: accepted ? `/deals/${dealId}` : "/discover",
+          ? `<strong>${esc(responder.name)}</strong> accepted your ${thing}. Open the deal to coordinate the details.`
+          : `<strong>${esc(responder.name)}</strong> declined your ${thing} this time.`,
+        ctaText: accepted ? "Open the deal" : "Back to Muabox",
+        ctaPath: accepted ? `/deals/${dealId}` : "/dashboard",
       }),
     });
   } catch (err) {
@@ -197,6 +204,56 @@ export async function notifyNewMessage(dealId: string, senderId: string) {
         heading: `${esc(sender.name)} sent you a message`,
         intro: `You have a new message on your Muabox deal. Open the conversation to reply.`,
         ctaText: "Read & reply",
+        ctaPath: `/deals/${dealId}`,
+      }),
+    });
+  } catch (err) {
+    logger.error("notification email failed", err);
+  }
+}
+
+export async function notifyNewPitch(dealId: string) {
+  if (!enabled()) return;
+  try {
+    const parties = await getDealParties(dealId);
+    if (!parties) return;
+    const { deal, brand, artist } = parties;
+    if (!brand.notify) return;
+    const rate =
+      deal.offer_amount != null
+        ? formatMoney(deal.offer_amount, deal.currency)
+        : null;
+    await sendEmail({
+      to: brand.email,
+      subject: `${artist.name} pitched you a collaboration ✨`,
+      html: emailLayout({
+        heading: "You have a new pitch",
+        intro: `<strong>${esc(artist.name)}</strong> would like to collaborate with your brand on Muabox${
+          rate ? ` (proposed rate: <strong>${esc(rate)}</strong>)` : ""
+        }. Open the pitch to review their profile and respond.`,
+        ctaText: "Review the pitch",
+        ctaPath: `/deals/${dealId}`,
+      }),
+    });
+  } catch (err) {
+    logger.error("notification email failed", err);
+  }
+}
+
+export async function notifyReminder(dealId: string) {
+  if (!enabled()) return;
+  try {
+    const parties = await getDealParties(dealId);
+    if (!parties) return;
+    const { brand, artist } = parties;
+    if (!artist.notify) return;
+    await sendEmail({
+      to: artist.email,
+      subject: `Reminder: ${brand.name} is waiting on your reply`,
+      html: emailLayout({
+        heading: "A brand is waiting on you",
+        intro: `<strong>${esc(brand.name)}</strong> sent you a collab offer on Muabox and hasn't heard back yet. A quick accept or decline keeps your response rate strong.`,
+        ctaText: "Respond now",
         ctaPath: `/deals/${dealId}`,
       }),
     });

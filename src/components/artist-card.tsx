@@ -81,6 +81,21 @@ export function ArtistCard({ artist }: { artist: DiscoverArtist }) {
             </span>
           </div>
 
+          {artist.specialties?.length > 0 && (
+            <div className="flex flex-wrap gap-1">
+              {artist.specialties.slice(0, 2).map((sp) => (
+                <Badge key={sp} variant="outline" className="text-xs">
+                  {sp}
+                </Badge>
+              ))}
+              {artist.specialties.length > 2 && (
+                <Badge variant="outline" className="text-xs">
+                  +{artist.specialties.length - 2}
+                </Badge>
+              )}
+            </div>
+          )}
+
           <div className="flex items-center justify-between gap-2">
             {artist.location ? (
               <span className="inline-flex items-center gap-1 truncate text-sm text-muted-foreground">

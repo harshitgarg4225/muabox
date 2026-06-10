@@ -22,19 +22,20 @@ export default function Home() {
           <div className="animate-rise mx-auto max-w-3xl text-center">
             <span className="inline-flex items-center gap-2 rounded-full border bg-white px-3 py-1 text-sm font-medium text-navy shadow-soft">
               <Star className="size-3.5 fill-yellow text-yellow" />
-              Real, consented creator collaborations
+              India&apos;s luxury MUA × skincare marketplace
             </span>
             <h1 className="mt-6 text-balance text-4xl font-bold tracking-tight text-navy sm:text-6xl">
-              Where makeup artists meet{" "}
+              Where luxury makeup artists meet{" "}
               <span className="relative whitespace-nowrap">
                 <span className="relative z-10">skincare brands</span>
                 <span className="absolute inset-x-0 bottom-1 -z-0 h-3 bg-yellow/70" />
               </span>
             </h1>
             <p className="mx-auto mt-5 max-w-2xl text-pretty text-lg text-muted-foreground">
-              Artists connect Instagram in one tap and set their terms. Brands
-              browse a roster of opted-in creators and send PR collab offers. No
-              scraping. No spam. Just matches that want to happen.
+              Bridal, editorial, celebrity — the finest MUAs connect Instagram
+              in one tap and set their terms. Skincare brands run budgeted
+              campaigns across a hand-opted-in roster. No scraping. No spam.
+              Just collabs that want to happen.
             </p>
             <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <Button asChild size="xl" variant="accent">
@@ -142,8 +143,8 @@ export default function Home() {
           title="Get discovered & get paid"
           points={[
             "Auto-filled profile from your real Instagram stats",
-            "Set your pricing and pause deals anytime",
-            "An inbox of PR offers — accept or decline",
+            "Set your niches, your pricing, your terms",
+            "Receive offers — or pitch brands yourself",
           ]}
           href="/login?role=artist"
           cta="Join as an artist"
@@ -153,9 +154,9 @@ export default function Home() {
           kind="For brands"
           title="Find the right faces, fast"
           points={[
-            "Browse opted-in artists with live engagement",
-            "Filter by followers, location and pricing",
-            "Send a deal in seconds and track responses",
+            "Filter luxury niches — bridal, editorial, celebrity",
+            "Run budgeted campaigns and invite artists at scale",
+            "Track responses, reach and cost per 1K — real ROI",
           ]}
           href="/login?role=brand"
           cta="Join as a brand"
