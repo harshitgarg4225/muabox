@@ -28,6 +28,7 @@ create table artists (
   price_min integer,           -- in minor currency units (e.g. paise); null if custom
   price_max integer,
   currency text default 'INR',
+  specialties text[] default '{}',   -- luxury niches: Bridal, Editorial, Celebrity…
   created_at timestamptz default now()
 );
 
@@ -74,10 +75,24 @@ create table brands (
   website text,
   logo_url text,
   description text,
+  open_to_pitches boolean default true,
   created_at timestamptz default now()
 );
 
--- DEALS (brand -> artist offers)
+-- CAMPAIGNS (brand budget container for outreach at scale)
+create table campaigns (
+  id uuid primary key default gen_random_uuid(),
+  brand_id uuid not null references brands(id) on delete cascade,
+  name text not null,
+  description text,
+  product text,
+  budget integer,                          -- paise; null = no fixed budget
+  status text not null default 'active',   -- active | closed
+  target_specialties text[] default '{}',
+  created_at timestamptz default now()
+);
+
+-- DEALS (brand -> artist offers, or artist -> brand pitches)
 create type deal_status as enum ('sent', 'viewed', 'accepted', 'declined', 'completed');
 
 create table deals (
@@ -94,6 +109,9 @@ create table deals (
   last_message_at timestamptz,
   last_message_sender_id uuid,
   paid_at timestamptz,
+  campaign_id uuid references campaigns(id) on delete set null,
+  initiated_by user_role not null default 'brand',
+  reminded_at timestamptz,
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -141,6 +159,8 @@ create table artist_payout_accounts (
 create index instagram_media_account_idx on instagram_media (instagram_account_id);
 create index deals_artist_idx on deals (artist_id);
 create index deals_brand_idx on deals (brand_id);
+create index deals_campaign_idx on deals (campaign_id);
+create index campaigns_brand_idx on campaigns (brand_id);
 create index deal_messages_deal_idx on deal_messages (deal_id, created_at);
 create index payments_deal_idx on payments (deal_id);
 create unique index payments_order_uidx on payments (razorpay_order_id);
@@ -151,6 +171,7 @@ alter table artists enable row level security;
 alter table instagram_accounts enable row level security;
 alter table instagram_media enable row level security;
 alter table brands enable row level security;
+alter table campaigns enable row level security;
 alter table deals enable row level security;
 alter table deal_messages enable row level security;
 alter table payments enable row level security;
@@ -189,7 +210,23 @@ create policy "brand owner" on brands for all using (auth.uid() = id);
 
 -- deals: visible to the brand or the artist on the deal
 create policy "deal participants read" on deals for select using (auth.uid() = brand_id or auth.uid() = artist_id);
-create policy "brand creates deal" on deals for insert with check (auth.uid() = brand_id);
+create policy "brand creates deal" on deals for insert with check (
+  auth.uid() = brand_id and initiated_by = 'brand'
+);
+create policy "artist creates pitch" on deals for insert with check (
+  auth.uid() = artist_id and initiated_by = 'artist'
+);
+
+-- campaigns: owner full access; an artist on a campaign deal can read it
+create policy "own campaigns" on campaigns
+  for all using (auth.uid() = brand_id) with check (auth.uid() = brand_id);
+create policy "deal artist reads campaign" on campaigns for select using (
+  exists (
+    select 1 from deals d
+    where d.campaign_id = campaigns.id and d.artist_id = auth.uid()
+  )
+);
+grant select, insert, update on campaigns to authenticated;
 create policy "participants update" on deals for update using (auth.uid() = brand_id or auth.uid() = artist_id);
 
 -- deal_messages: participants of the parent deal can read; post as self
@@ -239,7 +276,8 @@ select a.id as artist_id, a.display_name, a.bio, a.location, a.accepting_deals,
        ia.username, ia.followers_count, ia.media_count, ia.profile_picture_url,
        ia.biography,
        a.created_at,
-       ia.engagement_rate
+       ia.engagement_rate,
+       a.specialties
 from artists a
 join instagram_accounts ia on ia.artist_id = a.id
 where a.accepting_deals = true;
@@ -259,7 +297,7 @@ where a.accepting_deals = true;
 -- PUBLIC BRAND VIEW (so artists can see who sent them a deal).
 -- Brands are companies; only their public-facing fields are exposed here.
 create view brand_public as
-select id as brand_id, company_name, website, logo_url, description
+select id as brand_id, company_name, website, logo_url, description, open_to_pitches
 from brands;
 
 -- Expose the public views to logged-in users only (subject to PostgREST).

@@ -12,10 +12,12 @@ export function DealActions({
   dealId,
   role,
   status,
+  initiatedBy = "brand",
 }: {
   dealId: string;
   role: UserRole;
   status: DealStatus;
+  initiatedBy?: UserRole;
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
@@ -32,8 +34,11 @@ export function DealActions({
     });
   }
 
-  const canRespond =
-    role === "artist" && (status === "sent" || status === "viewed");
+  // Only the RECEIVER responds: artist for brand offers, brand for pitches.
+  const isReceiver =
+    (initiatedBy === "brand" && role === "artist") ||
+    (initiatedBy === "artist" && role === "brand");
+  const canRespond = isReceiver && (status === "sent" || status === "viewed");
   const canComplete = status === "accepted";
 
   if (!canRespond && !canComplete) return null;
@@ -46,7 +51,10 @@ export function DealActions({
             variant="accent"
             disabled={pending}
             onClick={() =>
-              run(() => respondToDeal(dealId, "accepted"), "Deal accepted 🎉")
+              run(
+                () => respondToDeal(dealId, "accepted"),
+                initiatedBy === "artist" ? "Pitch accepted 🎉" : "Deal accepted 🎉"
+              )
             }
           >
             <Check /> Accept

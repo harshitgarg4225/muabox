@@ -5,6 +5,7 @@ import { getUserAndProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { DealStatusBadge } from "@/components/deal-status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { CursorPager } from "@/components/cursor-pager";
@@ -168,7 +169,12 @@ export default async function DealsPage({
                       </p>
                     </div>
 
-                    <DealStatusBadge status={deal.status} />
+                    <span className="flex items-center gap-1.5">
+                      {deal.initiated_by === "artist" && (
+                        <Badge variant="outline">Pitch</Badge>
+                      )}
+                      <DealStatusBadge status={deal.status} />
+                    </span>
                   </CardContent>
                 </Card>
               </Link>

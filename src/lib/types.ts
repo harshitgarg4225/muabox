@@ -28,6 +28,7 @@ export type Artist = {
   price_min: number | null;
   price_max: number | null;
   currency: string;
+  specialties: string[];
   created_at: string;
 };
 
@@ -37,6 +38,21 @@ export type Brand = {
   website: string | null;
   logo_url: string | null;
   description: string | null;
+  open_to_pitches: boolean;
+  created_at: string;
+};
+
+export type CampaignStatus = "active" | "closed";
+
+export type Campaign = {
+  id: string;
+  brand_id: string;
+  name: string;
+  description: string | null;
+  product: string | null;
+  budget: number | null;          // paise; null = no fixed budget
+  status: CampaignStatus;
+  target_specialties: string[];
   created_at: string;
 };
 
@@ -85,6 +101,9 @@ export type Deal = {
   last_message_at: string | null;
   last_message_sender_id: string | null;
   paid_at: string | null;
+  campaign_id: string | null;
+  initiated_by: UserRole;
+  reminded_at: string | null;
   created_at: string;
   updated_at: string;
 };
@@ -142,6 +161,7 @@ export type ArtistPublicStats = {
   biography: string | null;
   created_at: string;
   engagement_rate: number | null;
+  specialties: string[];
 };
 
 export type ArtistPublicMedia = {
@@ -164,6 +184,7 @@ export type BrandPublic = {
   website: string | null;
   logo_url: string | null;
   description: string | null;
+  open_to_pitches: boolean;
 };
 
 /** Format minor currency units (paise) as a display string. */

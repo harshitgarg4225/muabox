@@ -23,7 +23,9 @@ Built per the build bible in
 | Auth (email/password + magic link) + role onboarding | ✅ |
 | Artist: Instagram OAuth connect, auto-filled stats, media gallery, engagement rate | ✅ |
 | Artist: profile editor, pricing (fixed/custom), accepting-deals toggle, manual refresh | ✅ |
-| Brand: profile + logo upload, Discover (search, sort, tiers, engagement, shortlists), artist detail | ✅ |
+| Brand: profile + logo upload, Discover (search, sort, tiers, engagement, specialty niches, shortlists), artist detail | ✅ |
+| Brand: campaigns with budgets, bulk invites from shortlist, response-rate / reach / cost-per-1K ROI, audience snapshot, reminders | ✅ |
+| Artist: brand directory + pitching (brands can toggle openness), luxury specialties, earnings summary | ✅ |
 | Deals: send, full lifecycle (accept/decline/complete), threaded messaging + live updates | ✅ |
 | Unread badges + read tracking across the deal inbox | ✅ |
 | Email notifications (new deal, accept/decline, new message, completed, paid) via Resend | ✅ optional |
@@ -90,7 +92,8 @@ npm install
    shortlists + the discover sort, `0003` adds deal messaging, read tracking and
    live updates, `0004` adds Razorpay payments + INR defaults, `0005` adds
    artist payouts (Razorpay Route), `0006` adds admin + moderation flags,
-   `0007` adds stored engagement + email preferences.)
+   `0007` adds stored engagement + email preferences, `0008` adds campaigns,
+   pitches, reminders and luxury specialties.)
 3. Storage → create a **public** bucket named `logos` (for brand logos).
 4. Auth → for easy local testing, disable "Confirm email" (Auth → Providers →
    Email) so password sign-up logs you straight in.
