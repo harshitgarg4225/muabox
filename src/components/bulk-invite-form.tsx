@@ -21,6 +21,7 @@ export type InvitableArtist = {
   avatar: string | null;
   followers: number | null;
   engagement: number | null;
+  match?: number;
 };
 
 export function BulkInviteForm({
@@ -130,9 +131,16 @@ export function BulkInviteForm({
               ) : (
                 <span className="size-9 rounded-full bg-muted" />
               )}
-              <span className="min-w-0">
-                <span className="block truncate text-sm font-medium text-navy">
-                  {a.name}
+              <span className="min-w-0 flex-1">
+                <span className="flex items-center gap-2">
+                  <span className="truncate text-sm font-medium text-navy">
+                    {a.name}
+                  </span>
+                  {a.match != null && (
+                    <span className="shrink-0 rounded-full bg-yellow/20 px-2 py-0.5 text-[10px] font-bold text-amber-700">
+                      {a.match}% match
+                    </span>
+                  )}
                 </span>
                 <span className="block truncate text-xs text-muted-foreground">
                   @{a.username} ·{" "}

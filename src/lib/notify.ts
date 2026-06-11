@@ -2,6 +2,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, emailLayout, esc } from "@/lib/email";
 import { logger } from "@/lib/logger";
+import { sendWhatsapp } from "@/lib/whatsapp";
 import { firstName } from "@/lib/greeting";
 import { formatMoney, type DealStatus, type UserRole } from "@/lib/types";
 
@@ -20,7 +21,7 @@ function enabled() {
   return !!process.env.RESEND_API_KEY && !!process.env.SUPABASE_SERVICE_ROLE_KEY;
 }
 
-type Party = { id: string; email: string | null; name: string; notify: boolean };
+type Party = { id: string; email: string | null; name: string; notify: boolean; whatsapp: string | null };
 
 async function getDealParties(dealId: string) {
   const admin = createAdminClient();
@@ -34,7 +35,7 @@ async function getDealParties(dealId: string) {
 
   const { data: profiles } = await admin
     .from("profiles")
-    .select("id, email, full_name, email_notifications")
+    .select("id, email, full_name, email_notifications, whatsapp")
     .in("id", [deal.brand_id, deal.artist_id]);
   const { data: brandRow } = await admin
     .from("brands")
@@ -55,6 +56,7 @@ async function getDealParties(dealId: string) {
         email: string | null;
         full_name: string | null;
         email_notifications: boolean | null;
+        whatsapp: string | null;
       },
     ])
   );
@@ -67,6 +69,7 @@ async function getDealParties(dealId: string) {
       profById.get(deal.brand_id)?.full_name ||
       "A brand",
     notify: profById.get(deal.brand_id)?.email_notifications !== false,
+    whatsapp: profById.get(deal.brand_id)?.whatsapp ?? null,
   };
   const artist: Party = {
     id: deal.artist_id,
@@ -76,6 +79,7 @@ async function getDealParties(dealId: string) {
       profById.get(deal.artist_id)?.full_name ||
       "An artist",
     notify: profById.get(deal.artist_id)?.email_notifications !== false,
+    whatsapp: profById.get(deal.artist_id)?.whatsapp ?? null,
   };
 
   return { deal, brand, artist };
@@ -104,6 +108,11 @@ export async function notifyNewDeal(dealId: string) {
         footnote: "Reply, accept, or decline right from the deal page.",
       }),
     });
+    if (artist.notify)
+      await sendWhatsapp(
+        artist.whatsapp,
+        `💄 ${brand.name} sent you a new collab offer on Muabox. Open your deals to reply.`
+      );
   } catch (err) {
     logger.error("notification email failed", err);
   }
@@ -139,6 +148,11 @@ export async function notifyDealResponse(dealId: string, status: DealStatus) {
         ctaPath: accepted ? `/deals/${dealId}` : "/dashboard",
       }),
     });
+    if (accepted && recipient.notify)
+      await sendWhatsapp(
+        recipient.whatsapp,
+        `🎉 ${responder.name} accepted your ${thing} on Muabox.`
+      );
   } catch (err) {
     logger.error("notification email failed", err);
   }
@@ -191,6 +205,11 @@ export async function notifyPayment(dealId: string) {
           "Payments are processed securely via Razorpay. Payout to your account follows your payout setup.",
       }),
     });
+    if (artist.notify)
+      await sendWhatsapp(
+        artist.whatsapp,
+        `💸 You've been paid ${amount ?? "your fee"} on Muabox. The transfer to your bank is on its way.`
+      );
   } catch (err) {
     logger.error("notification email failed", err);
   }

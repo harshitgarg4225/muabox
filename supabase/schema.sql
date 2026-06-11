@@ -12,6 +12,7 @@ create table profiles (
   is_admin boolean default false,
   suspended boolean default false,
   email_notifications boolean default true,
+  whatsapp text,
   created_at timestamptz default now()
 );
 
@@ -158,8 +159,22 @@ create table artist_payout_accounts (
   updated_at timestamptz default now()
 );
 
+-- REVIEWS (left after an accepted/completed collaboration; both directions)
+create table reviews (
+  id uuid primary key default gen_random_uuid(),
+  deal_id uuid not null references deals(id) on delete cascade,
+  reviewer_id uuid not null references profiles(id) on delete cascade,
+  reviewee_id uuid not null references profiles(id) on delete cascade,
+  reviewer_role user_role not null,
+  rating int not null check (rating between 1 and 5),
+  comment text,
+  created_at timestamptz default now(),
+  unique (deal_id, reviewer_id)
+);
+
 -- INDEXES
 create index instagram_media_account_idx on instagram_media (instagram_account_id);
+create index reviews_reviewee_idx on reviews (reviewee_id);
 create index deals_artist_idx on deals (artist_id);
 create index deals_brand_idx on deals (brand_id);
 create index deals_campaign_idx on deals (campaign_id);
@@ -179,6 +194,7 @@ alter table deals enable row level security;
 alter table deal_messages enable row level security;
 alter table payments enable row level security;
 alter table artist_payout_accounts enable row level security;
+alter table reviews enable row level security;
 
 -- profiles: a user sees/edits only their own profile row
 create policy "own profile" on profiles for all using (auth.uid() = id);
@@ -188,6 +204,7 @@ revoke update on profiles from authenticated;
 revoke update on profiles from anon;
 -- ...except their own email notification preference (single safe column).
 grant update (email_notifications) on profiles to authenticated;
+grant update (whatsapp) on profiles to authenticated;
 
 -- artists: owner full access; anyone authenticated can READ artists who are accepting deals
 create policy "artist owner" on artists for all using (auth.uid() = id);
@@ -323,6 +340,40 @@ alter table saved_artists enable row level security;
 create policy "own saves" on saved_artists
   for all using (auth.uid() = brand_id) with check (auth.uid() = brand_id);
 grant select, insert, delete on saved_artists to authenticated;
+
+-- reviews: public read (trust signal); write only your counterparty on a real deal
+create policy "reviews readable" on reviews for select using (true);
+create policy "participant writes review" on reviews for insert with check (
+  reviewer_id = auth.uid()
+  and exists (
+    select 1 from deals d
+    where d.id = reviews.deal_id
+      and d.status in ('accepted', 'completed')
+      and (
+        (d.brand_id = auth.uid() and d.artist_id = reviews.reviewee_id)
+        or (d.artist_id = auth.uid() and d.brand_id = reviews.reviewee_id)
+      )
+  )
+);
+grant select, insert on reviews to authenticated;
+
+create view artist_ratings as
+select r.reviewee_id as artist_id,
+       round(avg(r.rating)::numeric, 1) as avg_rating,
+       count(*)::int as review_count
+from reviews r
+join profiles p on p.id = r.reviewee_id and p.role = 'artist'
+group by r.reviewee_id;
+grant select on artist_ratings to authenticated;
+
+create view brand_ratings as
+select r.reviewee_id as brand_id,
+       round(avg(r.rating)::numeric, 1) as avg_rating,
+       count(*)::int as review_count
+from reviews r
+join profiles p on p.id = r.reviewee_id and p.role = 'brand'
+group by r.reviewee_id;
+grant select on brand_ratings to authenticated;
 
 -- keep deals.updated_at fresh
 create or replace function set_updated_at()

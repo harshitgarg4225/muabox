@@ -103,7 +103,13 @@ export function AppNav({
                 Admin
               </Link>
             )}
-            <span className="hidden max-w-[10rem] truncate text-sm font-medium text-navy sm:inline">
+            <Link
+              href="/help"
+              className="hidden rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-navy sm:inline-block"
+            >
+              Help
+            </Link>
+            <span className="hidden max-w-[9rem] truncate text-sm font-medium text-navy md:inline">
               {name ?? (isArtist ? "Artist" : "Brand")}
             </span>
             <form action="/auth/signout" method="post">

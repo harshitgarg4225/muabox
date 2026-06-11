@@ -18,6 +18,8 @@ import { DealActions } from "@/components/deal-actions";
 import { DealThread } from "@/components/deal-thread";
 import { PayDealButton } from "@/components/pay-deal-button";
 import { RemindButton } from "@/components/remind-button";
+import { ReviewForm } from "@/components/review-form";
+import { StarRating } from "@/components/star-rating";
 import { compensationLabel } from "@/lib/pricing";
 import { PLATFORM_FEE_PERCENT, artistShare } from "@/lib/payouts";
 import {
@@ -26,6 +28,7 @@ import {
   type DealMessage,
   type ArtistPublicStats,
   type BrandPublic,
+  type Review,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -99,6 +102,20 @@ export default async function DealDetailPage({
       offer_description: c.offer_description ?? null,
       product_value: c.product_value ?? null,
     };
+  }
+
+  // Reviews for this deal (both directions).
+  const reviewable = deal.status === "accepted" || deal.status === "completed";
+  let myReview: Review | null = null;
+  let theirReview: Review | null = null;
+  if (reviewable) {
+    const { data: reviewRows } = await supabase
+      .from("reviews")
+      .select("*")
+      .eq("deal_id", id);
+    const rows = (reviewRows as Review[] | null) ?? [];
+    myReview = rows.find((r) => r.reviewer_id === user.id) ?? null;
+    theirReview = rows.find((r) => r.reviewer_id !== user.id) ?? null;
   }
 
   // Resolve the counterparty (public view; no sensitive data).
@@ -289,6 +306,43 @@ export default async function DealDetailPage({
             )}
         </CardContent>
       </Card>
+
+      {reviewable && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base text-navy">Reviews</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {myReview ? (
+              <div className="rounded-xl border bg-secondary/30 p-4">
+                <p className="mb-1 text-sm font-medium text-navy">Your review</p>
+                <StarRating value={myReview.rating} size="md" />
+                {myReview.comment && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    “{myReview.comment}”
+                  </p>
+                )}
+              </div>
+            ) : (
+              <ReviewForm dealId={deal.id} counterpartyName={counterpartyName} />
+            )}
+
+            {theirReview && (
+              <div className="rounded-xl border p-4">
+                <p className="mb-1 text-sm font-medium text-navy">
+                  {counterpartyName}&apos;s review of you
+                </p>
+                <StarRating value={theirReview.rating} size="md" />
+                {theirReview.comment && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    “{theirReview.comment}”
+                  </p>
+                )}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
