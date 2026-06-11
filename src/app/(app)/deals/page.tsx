@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { DealStatusBadge } from "@/components/deal-status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { CursorPager } from "@/components/cursor-pager";
+import { LocalDate } from "@/components/local-date";
 import {
   formatMoney,
   type Deal,
@@ -20,17 +21,6 @@ export const dynamic = "force-dynamic";
 
 const PAGE = 20;
 
-function timeAgo(iso: string | null) {
-  if (!iso) return "";
-  const diff = Date.now() - new Date(iso).getTime();
-  const mins = Math.round(diff / 60000);
-  if (mins < 1) return "just now";
-  if (mins < 60) return `${mins}m ago`;
-  const hrs = Math.round(mins / 60);
-  if (hrs < 24) return `${hrs}h ago`;
-  const days = Math.round(hrs / 24);
-  return days < 7 ? `${days}d ago` : new Date(iso).toLocaleDateString();
-}
 
 const SCOPES = ["action", "waiting", "accepted", "pitches"] as const;
 type Scope = (typeof SCOPES)[number] | undefined;
@@ -215,7 +205,7 @@ export default async function DealsPage({
                           {who?.name ?? (isArtist ? "A brand" : "Artist")}
                         </span>
                         <span className="text-xs text-muted-foreground">
-                          {timeAgo(deal.last_message_at)}
+                          <LocalDate iso={deal.last_message_at} mode="relative" />
                         </span>
                       </div>
                       <p className="truncate text-sm text-muted-foreground">

@@ -18,6 +18,7 @@ import { GettingStarted } from "@/components/getting-started";
 import { EmptyState } from "@/components/empty-state";
 import { AttentionCard, type AttentionItem } from "@/components/attention-card";
 import { ProfileStrength, type StrengthCheck } from "@/components/profile-strength";
+import { LocalDate } from "@/components/local-date";
 import { timeGreeting, firstName, nowMs } from "@/lib/greeting";
 import {
   formatMoney,
@@ -316,8 +317,7 @@ async function ArtistDashboard({
               <StatGrid account={account} media={media} />
               {account.last_synced_at && (
                 <p className="text-xs text-muted-foreground">
-                  Last synced{" "}
-                  {new Date(account.last_synced_at).toLocaleString()}
+                  Last synced <LocalDate iso={account.last_synced_at} mode="datetime" />
                 </p>
               )}
             </CardContent>

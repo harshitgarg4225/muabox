@@ -57,6 +57,18 @@ export function BrandSettingsForm({
   async function onUpload(e: React.ChangeEvent<HTMLInputElement>) {
     const file = e.target.files?.[0];
     if (!file) return;
+    // Friendly client-side guards before we hit storage.
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please choose an image file (PNG, JPG, SVG…).");
+      e.target.value = "";
+      return;
+    }
+    const MAX_MB = 2;
+    if (file.size > MAX_MB * 1024 * 1024) {
+      toast.error(`That image is too large — keep it under ${MAX_MB}MB.`);
+      e.target.value = "";
+      return;
+    }
     setUploading(true);
     try {
       const ext = file.name.split(".").pop();
@@ -126,6 +138,9 @@ export function BrandSettingsForm({
                 disabled={uploading}
                 onChange={onUpload}
               />
+              <p className="mt-1 text-xs text-muted-foreground">
+                Square image works best · PNG/JPG · up to 2MB
+              </p>
             </div>
           </div>
 
