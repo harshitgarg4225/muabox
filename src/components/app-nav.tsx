@@ -105,7 +105,7 @@ export function AppNav({
             )}
             <Link
               href="/help"
-              className="hidden rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-navy sm:inline-block"
+              className="rounded-full px-3 py-1.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-secondary hover:text-navy"
             >
               Help
             </Link>
