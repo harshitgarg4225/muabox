@@ -18,6 +18,8 @@ import { DealActions } from "@/components/deal-actions";
 import { DealThread } from "@/components/deal-thread";
 import { PayDealButton } from "@/components/pay-deal-button";
 import { RemindButton } from "@/components/remind-button";
+import { ConfirmButton } from "@/components/confirm-button";
+import { withdrawDeal } from "@/app/(app)/deals/actions";
 import { ReviewForm } from "@/components/review-form";
 import { StarRating } from "@/components/star-rating";
 import { compensationLabel } from "@/lib/pricing";
@@ -273,7 +275,22 @@ export default async function DealDetailPage({
             {profile.role === "brand" &&
               !isPitch &&
               (deal.status === "sent" || deal.status === "viewed") && (
-                <RemindButton dealId={deal.id} remindedAt={deal.reminded_at} />
+                <>
+                  <RemindButton dealId={deal.id} remindedAt={deal.reminded_at} />
+                  <ConfirmButton
+                    label="Withdraw"
+                    variant="outline"
+                    size="default"
+                    title="Withdraw this offer?"
+                    description="The artist will no longer be able to accept it. You can always send a fresh offer later."
+                    confirmLabel="Yes, withdraw"
+                    successMessage="Offer withdrawn"
+                    action={async () => {
+                      "use server";
+                      await withdrawDeal(deal.id);
+                    }}
+                  />
+                </>
               )}
             {profile.role === "brand" &&
               !deal.paid_at &&

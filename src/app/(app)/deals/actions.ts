@@ -263,6 +263,31 @@ export async function remindDeal(dealId: string) {
   return { ok: true as const };
 }
 
+/** A brand retracts its own still-pending offer. */
+export async function withdrawDeal(dealId: string) {
+  const { supabase, user } = await requireUser();
+  const { data: deal } = await supabase
+    .from("deals")
+    .select("brand_id, initiated_by, status")
+    .eq("id", dealId)
+    .maybeSingle();
+  if (
+    !deal ||
+    deal.brand_id !== user.id ||
+    deal.initiated_by !== "brand" ||
+    (deal.status !== "sent" && deal.status !== "viewed")
+  ) {
+    throw new Error("Cannot withdraw");
+  }
+  const { error } = await supabase
+    .from("deals")
+    .update({ status: "declined" })
+    .eq("id", dealId);
+  if (error) throw error;
+  revalidatePath(`/deals/${dealId}`);
+  revalidatePath("/deals");
+}
+
 export async function sendMessage(dealId: string, body: string) {
   const { supabase, user } = await requireUser();
   const limit = rateLimit(`msg:${user.id}`, 30, 60_000);
