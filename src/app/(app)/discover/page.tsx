@@ -263,7 +263,17 @@ export default async function DiscoverPage({
           <EmptyState
             emoji="💄"
             title="New artists are joining every day"
-            body="No creators are accepting deals just yet. Check back soon."
+            body="No creators are accepting deals just yet. Know a makeup artist who'd be perfect for your campaigns? Invite them — it takes two minutes to join."
+            secondary={{
+              label: "Invite an artist you love",
+              href: `mailto:?subject=${encodeURIComponent(
+                "You should be on Muabox"
+              )}&body=${encodeURIComponent(
+                "Hey! I'm looking for makeup artists for brand collaborations on Muabox — you connect your Instagram, set your rates, and brands send you paid deals. Join here: " +
+                  (process.env.NEXT_PUBLIC_APP_URL ?? "https://muabox.vercel.app") +
+                  "/login?role=artist"
+              )}`,
+            }}
           />
         )
       ) : (

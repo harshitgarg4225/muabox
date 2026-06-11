@@ -41,9 +41,11 @@ type FormValues = z.input<typeof schema>;
 export function PayoutOnboardingForm({
   account,
   configured,
+  feePercent,
 }: {
   account: ArtistPayoutAccount | null;
   configured: boolean;
+  feePercent: number;
 }) {
   const {
     register,
@@ -81,7 +83,8 @@ export function PayoutOnboardingForm({
         <CardDescription>
           Add your bank details so brand payments reach you automatically via
           Razorpay. We only store the last 4 digits — the rest goes straight to
-          Razorpay.
+          Razorpay. Muabox keeps a {feePercent}% platform fee per collaboration;
+          the rest is transferred to you, automatically. No other charges, ever.
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-4">

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Camera, Inbox, Send, ExternalLink, Sparkles } from "lucide-react";
+import { Camera, Inbox, Send, ExternalLink, Sparkles, Eye } from "lucide-react";
 import { redirect } from "next/navigation";
 import { getUserAndProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
@@ -16,6 +16,9 @@ import { RefreshStatsButton } from "@/components/refresh-stats-button";
 import { StatGrid, MediaGallery, IgHeader } from "@/components/profile-stats";
 import { GettingStarted } from "@/components/getting-started";
 import { EmptyState } from "@/components/empty-state";
+import { AttentionCard, type AttentionItem } from "@/components/attention-card";
+import { ProfileStrength, type StrengthCheck } from "@/components/profile-strength";
+import { timeGreeting, firstName, nowMs } from "@/lib/greeting";
 import {
   formatMoney,
   type Artist,
@@ -24,6 +27,8 @@ import {
   type InstagramAccount,
   type InstagramMedia,
 } from "@/lib/types";
+
+const STALE_MS = 48 * 60 * 60 * 1000;
 
 export default async function DashboardPage({
   searchParams,
@@ -36,9 +41,9 @@ export default async function DashboardPage({
   const sp = await searchParams;
 
   return profile.role === "artist" ? (
-    <ArtistDashboard userId={user.id} flags={sp} />
+    <ArtistDashboard userId={user.id} fullName={profile.full_name} flags={sp} />
   ) : (
-    <BrandDashboard userId={user.id} />
+    <BrandDashboard userId={user.id} fullName={profile.full_name} />
   );
 }
 
@@ -68,9 +73,11 @@ function Banner({
 
 async function ArtistDashboard({
   userId,
+  fullName,
   flags,
 }: {
   userId: string;
+  fullName: string | null;
   flags: { connected?: string; ig_error?: string };
 }) {
   const supabase = await createClient();
@@ -97,41 +104,112 @@ async function ArtistDashboard({
     media = (data as InstagramMedia[]) ?? [];
   }
 
-  const { count: dealCount } = await supabase
-    .from("deals")
-    .select("id", { count: "exact", head: true })
-    .eq("artist_id", userId);
-
   const profileComplete = !!(artist?.bio || artist?.location);
   const accepting = !!artist?.accepting_deals;
 
-  // "What you've done so far": received / accepted / earned.
+  // Everything we need about this artist's deals, in one query.
   const { data: dealAgg } = await supabase
     .from("deals")
     .select("status, offer_amount, paid_at, initiated_by")
     .eq("artist_id", userId);
-  const received = (dealAgg ?? []).filter((d) => d.initiated_by === "brand").length;
-  const acceptedCount = (dealAgg ?? []).filter(
+  const allDeals = dealAgg ?? [];
+  const received = allDeals.filter((d) => d.initiated_by === "brand").length;
+  const acceptedCount = allDeals.filter(
     (d) => d.status === "accepted" || d.status === "completed"
   ).length;
-  const earned = (dealAgg ?? [])
+  const earned = allDeals
     .filter((d) => d.paid_at)
     .reduce((s, d) => s + (d.offer_amount ?? 0), 0);
+
+  const { data: payout } = await supabase
+    .from("artist_payout_accounts")
+    .select("status")
+    .eq("artist_id", userId)
+    .maybeSingle();
+  const payoutActive = payout?.status === "active";
+
+  // ---- Needs your attention ----
+  const pendingOffers = allDeals.filter(
+    (d) =>
+      d.initiated_by === "brand" &&
+      (d.status === "sent" || d.status === "viewed")
+  );
+  const pendingValue = pendingOffers.reduce(
+    (s, d) => s + (d.offer_amount ?? 0),
+    0
+  );
+  const paidAwaitingPayout = !payoutActive
+    ? allDeals.filter((d) => d.paid_at).reduce((s, d) => s + (d.offer_amount ?? 0), 0)
+    : 0;
+
+  const attention: AttentionItem[] = [];
+  if (pendingOffers.length > 0) {
+    attention.push({
+      emoji: "💌",
+      text: `${pendingOffers.length} ${pendingOffers.length === 1 ? "offer" : "offers"} waiting for your reply${
+        pendingValue > 0 ? ` — worth ${formatMoney(pendingValue, "INR")}` : ""
+      }`,
+      href: "/deals?scope=action",
+      cta: "Respond",
+    });
+  }
+  if (paidAwaitingPayout > 0) {
+    attention.push({
+      emoji: "💸",
+      text: `${formatMoney(paidAwaitingPayout, "INR")} has been paid — add your bank details to receive it`,
+      href: "/settings",
+      cta: "Set up payouts",
+    });
+  }
+
+  // ---- Profile strength ----
+  const strengthChecks: StrengthCheck[] = [
+    { label: "connect Instagram", done: !!account, href: "/api/instagram/connect" },
+    { label: "write a short bio", done: !!artist?.bio, href: "/settings" },
+    { label: "add your location", done: !!artist?.location, href: "/settings" },
+    {
+      label: "pick your specialties",
+      done: (artist?.specialties?.length ?? 0) > 0,
+      href: "/settings",
+    },
+    {
+      label: "add your rate card",
+      done: (artist?.rate_card?.length ?? 0) > 0,
+      href: "/settings",
+    },
+    { label: "turn on accepting deals", done: accepting, href: "/dashboard#accepting" },
+    { label: "set up payouts", done: payoutActive, href: "/settings" },
+  ];
+
+  const name = firstName(artist?.display_name) ?? firstName(fullName);
 
   return (
     <div className="space-y-6">
       <Banner connected={flags.connected} igError={flags.ig_error} />
 
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-navy">
-          {artist?.display_name ?? "Your"} dashboard
-        </h1>
-        <Button asChild variant="ghost" size="sm">
-          <Link href="/deals">
-            <Inbox /> {dealCount ?? 0} deals
-          </Link>
-        </Button>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-navy">
+            {timeGreeting()}{name ? `, ${name}` : ""} ✨
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {pendingOffers.length > 0
+              ? "Brands are waiting on you — take a look below."
+              : accepting
+                ? "You're live and discoverable. Here's how things stand."
+                : "Let's get you in front of brands."}
+          </p>
+        </div>
+        {account && (
+          <Button asChild variant="outline" size="sm">
+            <Link href={`/artists/${userId}`}>
+              <Eye /> Preview my profile
+            </Link>
+          </Button>
+        )}
       </div>
+
+      <AttentionCard items={attention} />
 
       <GettingStarted
         allDoneTitle="You're live for brands! 🎉"
@@ -158,6 +236,8 @@ async function ArtistDashboard({
           },
         ]}
       />
+
+      <ProfileStrength checks={strengthChecks} />
 
       <div className="grid gap-4 sm:grid-cols-3">
         <SummaryCard label="Offers received" value={received} icon={<Inbox />} />
@@ -270,7 +350,13 @@ async function ArtistDashboard({
   );
 }
 
-async function BrandDashboard({ userId }: { userId: string }) {
+async function BrandDashboard({
+  userId,
+  fullName,
+}: {
+  userId: string;
+  fullName: string | null;
+}) {
   const supabase = await createClient();
 
   const { data: brand } = await supabase
@@ -301,16 +387,79 @@ async function BrandDashboard({ userId }: { userId: string }) {
     .select("id", { count: "exact", head: true })
     .eq("brand_id", userId);
 
+  // ---- Needs your attention ----
+  const now = nowMs();
+  const pendingPitches = sent.filter(
+    (d) =>
+      d.initiated_by === "artist" &&
+      (d.status === "sent" || d.status === "viewed")
+  );
+  const unpaidAccepted = sent.filter(
+    (d) =>
+      (d.status === "accepted" || d.status === "completed") &&
+      !d.paid_at &&
+      (d.offer_amount ?? 0) > 0
+  );
+  const unpaidValue = unpaidAccepted.reduce(
+    (s, d) => s + (d.offer_amount ?? 0),
+    0
+  );
+  const staleInvites = sent.filter(
+    (d) =>
+      d.initiated_by === "brand" &&
+      (d.status === "sent" || d.status === "viewed") &&
+      d.last_message_at &&
+      now - new Date(d.last_message_at).getTime() > STALE_MS &&
+      (!d.reminded_at || now - new Date(d.reminded_at).getTime() > STALE_MS)
+  );
+
+  const attention: AttentionItem[] = [];
+  if (pendingPitches.length > 0) {
+    attention.push({
+      emoji: "✨",
+      text: `${pendingPitches.length} artist ${pendingPitches.length === 1 ? "pitch" : "pitches"} waiting for your review`,
+      href: "/deals?scope=pitches",
+      cta: "Review",
+    });
+  }
+  if (unpaidAccepted.length > 0) {
+    attention.push({
+      emoji: "💳",
+      text: `${unpaidAccepted.length} accepted ${unpaidAccepted.length === 1 ? "deal" : "deals"} awaiting payment (${formatMoney(unpaidValue, "INR")})`,
+      href: "/deals?scope=accepted",
+      cta: "Pay now",
+    });
+  }
+  if (staleInvites.length > 0) {
+    attention.push({
+      emoji: "⏰",
+      text: `${staleInvites.length} ${staleInvites.length === 1 ? "invite hasn't" : "invites haven't"} heard back in 48h+`,
+      href: "/deals?scope=waiting",
+      cta: "Nudge them",
+    });
+  }
+
+  const name = firstName(fullName) ?? brand?.company_name ?? null;
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-navy">
-          {brand?.company_name ?? "Brand"} dashboard
-        </h1>
+      <div className="flex flex-wrap items-end justify-between gap-3">
+        <div>
+          <h1 className="text-2xl font-bold text-navy">
+            {timeGreeting()}{name ? `, ${name}` : ""} 👋
+          </h1>
+          <p className="text-sm text-muted-foreground">
+            {attention.length > 0
+              ? "A few things need you — sorted by impact below."
+              : "All caught up. Here's how your campaigns are doing."}
+          </p>
+        </div>
         <Button asChild variant="accent">
           <Link href="/discover">Discover artists</Link>
         </Button>
       </div>
+
+      <AttentionCard items={attention} />
 
       <GettingStarted
         allDoneTitle="You're all set! 🎉"

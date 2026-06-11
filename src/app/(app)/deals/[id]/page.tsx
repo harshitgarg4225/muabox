@@ -19,6 +19,7 @@ import { DealThread } from "@/components/deal-thread";
 import { PayDealButton } from "@/components/pay-deal-button";
 import { RemindButton } from "@/components/remind-button";
 import { compensationLabel } from "@/lib/pricing";
+import { PLATFORM_FEE_PERCENT, artistShare } from "@/lib/payouts";
 import {
   formatMoney,
   type Deal,
@@ -218,6 +219,22 @@ export default async function DealDetailPage({
               {new Date(deal.paid_at).toLocaleDateString()}
             </div>
           )}
+
+          {profile.role === "artist" &&
+            deal.offer_amount != null &&
+            deal.offer_amount > 0 &&
+            (deal.status === "accepted" ||
+              deal.status === "completed" ||
+              !!deal.paid_at) && (
+              <p className="text-sm text-muted-foreground">
+                You receive{" "}
+                <span className="font-semibold text-navy">
+                  {formatMoney(artistShare(deal.offer_amount), deal.currency)}
+                </span>{" "}
+                after the {PLATFORM_FEE_PERCENT}% Muabox platform fee — paid
+                straight to your bank.
+              </p>
+            )}
 
           {profile.role === "artist" && deal.paid_at && !artistPayoutActive && (
             <div className="rounded-xl border border-yellow/40 bg-yellow/10 px-4 py-2.5 text-sm text-navy">

@@ -7,22 +7,31 @@ export function EmptyState({
   title,
   body,
   action,
+  secondary,
 }: {
   emoji: string;
   title: string;
   body: string;
   action?: { label: string; href: string };
+  secondary?: { label: string; href: string };
 }) {
   return (
     <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed bg-secondary/40 px-6 py-12 text-center">
       <span className="text-4xl">{emoji}</span>
       <h3 className="text-lg font-semibold text-navy">{title}</h3>
       <p className="max-w-md text-sm text-muted-foreground">{body}</p>
-      {action && (
-        <Button asChild variant="accent" className="mt-1">
-          <Link href={action.href}>{action.label}</Link>
-        </Button>
-      )}
+      <div className="mt-1 flex flex-wrap justify-center gap-2">
+        {action && (
+          <Button asChild variant="accent">
+            <Link href={action.href}>{action.label}</Link>
+          </Button>
+        )}
+        {secondary && (
+          <Button asChild variant="outline">
+            <a href={secondary.href}>{secondary.label}</a>
+          </Button>
+        )}
+      </div>
     </div>
   );
 }
