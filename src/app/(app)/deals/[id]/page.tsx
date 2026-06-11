@@ -22,6 +22,7 @@ import { ConfirmButton } from "@/components/confirm-button";
 import { withdrawDeal } from "@/app/(app)/deals/actions";
 import { ReviewForm } from "@/components/review-form";
 import { StarRating } from "@/components/star-rating";
+import { LocalDate } from "@/components/local-date";
 import { compensationLabel } from "@/lib/pricing";
 import { PLATFORM_FEE_PERCENT, artistShare } from "@/lib/payouts";
 import {
@@ -235,7 +236,7 @@ export default async function DealDetailPage({
           {deal.paid_at && (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-2.5 text-sm font-medium text-emerald-700">
               Paid {formatMoney(deal.offer_amount, deal.currency)} ·{" "}
-              {new Date(deal.paid_at).toLocaleDateString()}
+              <LocalDate iso={deal.paid_at} />
             </div>
           )}
 
