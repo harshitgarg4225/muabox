@@ -29,6 +29,9 @@ create table artists (
   price_max integer,
   currency text default 'INR',
   specialties text[] default '{}',   -- luxury niches: Bridal, Editorial, Celebrity…
+  rate_card jsonb default '[]'::jsonb,   -- [{deliverable, price(paise)|null}]
+  collab_types text[] default '{}',      -- Paid, Gifted/barter, Paid + product…
+  min_budget integer,                    -- paise
   created_at timestamptz default now()
 );
 
@@ -277,7 +280,10 @@ select a.id as artist_id, a.display_name, a.bio, a.location, a.accepting_deals,
        ia.biography,
        a.created_at,
        ia.engagement_rate,
-       a.specialties
+       a.specialties,
+       a.rate_card,
+       a.collab_types,
+       a.min_budget
 from artists a
 join instagram_accounts ia on ia.artist_id = a.id
 where a.accepting_deals = true;

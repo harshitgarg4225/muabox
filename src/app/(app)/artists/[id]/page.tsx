@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MediaGallery } from "@/components/profile-stats";
+import { RateCardDisplay } from "@/components/rate-card-display";
 import { SendDealDialog } from "@/components/send-deal-dialog";
 import { SaveArtistButton } from "@/components/save-artist-button";
 import { engagementRate } from "@/lib/instagram";
@@ -202,6 +203,26 @@ export default async function ArtistDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      {((artist.collab_types?.length ?? 0) > 0 ||
+        (artist.rate_card?.length ?? 0) > 0 ||
+        artist.min_budget != null) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base text-navy">
+              Rates &amp; collaborations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RateCardDisplay
+              collabTypes={artist.collab_types ?? []}
+              rateCard={artist.rate_card ?? []}
+              minBudget={artist.min_budget}
+              currency={artist.currency}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

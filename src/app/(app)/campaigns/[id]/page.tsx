@@ -21,6 +21,7 @@ import {
   type InvitableArtist,
 } from "@/components/bulk-invite-form";
 import { compact } from "@/lib/format";
+import { compensationLabel } from "@/lib/pricing";
 import {
   formatMoney,
   type Campaign,
@@ -202,10 +203,35 @@ export default async function CampaignDetailPage({
         <CampaignStatusButton campaignId={campaign.id} status={campaign.status} />
       </div>
 
-      {campaign.description && (
-        <p className="max-w-3xl text-sm text-muted-foreground">
-          {campaign.description}
-        </p>
+      {(campaign.compensation_type ||
+        campaign.offer_description ||
+        campaign.product ||
+        campaign.description) && (
+        <Card>
+          <CardContent className="grid gap-3 py-4 text-sm sm:grid-cols-2">
+            {compensationLabel(campaign.compensation_type) && (
+              <div>
+                <span className="font-medium text-navy">Offering: </span>
+                {compensationLabel(campaign.compensation_type)}
+                {campaign.offer_description ? ` · ${campaign.offer_description}` : ""}
+                {campaign.product_value != null
+                  ? ` · product worth ${formatMoney(campaign.product_value, "INR")}`
+                  : ""}
+              </div>
+            )}
+            {campaign.product && (
+              <div>
+                <span className="font-medium text-navy">Deliverables: </span>
+                {campaign.product}
+              </div>
+            )}
+            {campaign.description && (
+              <div className="sm:col-span-2 text-muted-foreground">
+                {campaign.description}
+              </div>
+            )}
+          </CardContent>
+        </Card>
       )}
 
       {/* ROI summary */}

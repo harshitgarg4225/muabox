@@ -25,6 +25,7 @@ import {
 } from "@/components/ui/card";
 import { updateArtistProfile } from "@/app/(app)/settings/actions";
 import { SPECIALTIES } from "@/lib/specialties";
+import { RateCardFields, type RateRow } from "@/components/rate-card-fields";
 import { cn } from "@/lib/utils";
 import type { Artist } from "@/lib/types";
 
@@ -73,6 +74,18 @@ export function ArtistSettingsForm({ artist }: { artist: Artist }) {
   const [specialties, setSpecialties] = useState<string[]>(
     artist.specialties ?? []
   );
+  const [collabTypes, setCollabTypes] = useState<string[]>(
+    artist.collab_types ?? []
+  );
+  const [rateRows, setRateRows] = useState<RateRow[]>(
+    (artist.rate_card ?? []).map((r) => ({
+      deliverable: r.deliverable,
+      price: r.price != null ? String(Math.round(r.price / 100)) : "",
+    }))
+  );
+  const [minBudget, setMinBudget] = useState<string>(
+    artist.min_budget != null ? String(Math.round(artist.min_budget / 100)) : ""
+  );
 
   function toggleSpecialty(sp: string) {
     setSpecialties((cur) =>
@@ -86,6 +99,17 @@ export function ArtistSettingsForm({ artist }: { artist: Artist }) {
       if (v != null && v !== "") fd.set(k, String(v));
     });
     fd.set("specialties", specialties.join(","));
+    fd.set("collab_types", collabTypes.join(","));
+    fd.set("min_budget", minBudget);
+    fd.set(
+      "rate_card",
+      JSON.stringify(
+        rateRows.map((r) => ({
+          deliverable: r.deliverable,
+          price: r.price ? Math.round(Number(r.price) * 100) : null,
+        }))
+      )
+    );
     try {
       await updateArtistProfile(fd);
       toast.success("Profile saved.");
@@ -214,6 +238,26 @@ export function ArtistSettingsForm({ artist }: { artist: Artist }) {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Collaborations &amp; rate card</CardTitle>
+          <CardDescription>
+            Spell out the deals you do and what they cost. This is the first
+            thing luxury brands look at.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <RateCardFields
+            collabTypes={collabTypes}
+            onCollabChange={setCollabTypes}
+            rows={rateRows}
+            onRowsChange={setRateRows}
+            minBudget={minBudget}
+            onMinBudgetChange={setMinBudget}
+          />
         </CardContent>
       </Card>
 

@@ -17,12 +17,14 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { SPECIALTIES } from "@/lib/specialties";
+import { COMPENSATION_TYPES } from "@/lib/pricing";
 import { createCampaign } from "@/app/(app)/campaigns/actions";
 import { cn } from "@/lib/utils";
 
 export function CreateCampaignDialog() {
   const [open, setOpen] = useState(false);
   const [specialties, setSpecialties] = useState<string[]>([]);
+  const [comp, setComp] = useState("paid");
   const [submitting, setSubmitting] = useState(false);
 
   function toggle(s: string) {
@@ -34,6 +36,7 @@ export function CreateCampaignDialog() {
   async function onSubmit(formData: FormData) {
     setSubmitting(true);
     formData.set("target_specialties", specialties.join(","));
+    formData.set("compensation_type", comp);
     try {
       const res = await createCampaign(formData);
       // createCampaign redirects on success; reaching here means failure.
@@ -71,13 +74,49 @@ export function CreateCampaignDialog() {
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="product">Product / deliverables</Label>
+              <Label htmlFor="product">Deliverables you expect</Label>
               <Input
                 id="product"
                 name="product"
                 placeholder="1 Reel + 2 Stories featuring the serum"
               />
             </div>
+            <div className="space-y-2">
+              <Label htmlFor="compensation_type">What you&apos;re offering</Label>
+              <select
+                id="compensation_type"
+                value={comp}
+                onChange={(e) => setComp(e.target.value)}
+                className="border-input h-9 w-full rounded-md border bg-transparent px-3 text-sm shadow-xs"
+              >
+                {COMPENSATION_TYPES.map((c) => (
+                  <option key={c.value} value={c.value}>
+                    {c.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="offer_description">Offer details</Label>
+              <Input
+                id="offer_description"
+                name="offer_description"
+                placeholder="e.g. ₹15,000 + full PR kit"
+              />
+            </div>
+            {(comp === "gifted" || comp === "paid_product") && (
+              <div className="space-y-2">
+                <Label htmlFor="product_value">Product value (₹, optional)</Label>
+                <Input
+                  id="product_value"
+                  name="product_value"
+                  type="number"
+                  min={0}
+                  step="1"
+                  placeholder="8000"
+                />
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="description">Brief</Label>
               <Textarea

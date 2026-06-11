@@ -18,6 +18,7 @@ import { DealActions } from "@/components/deal-actions";
 import { DealThread } from "@/components/deal-thread";
 import { PayDealButton } from "@/components/pay-deal-button";
 import { RemindButton } from "@/components/remind-button";
+import { compensationLabel } from "@/lib/pricing";
 import {
   formatMoney,
   type Deal,
@@ -84,13 +85,19 @@ export default async function DealDetailPage({
 
   // Campaign context, if this deal belongs to one.
   let campaignName: string | null = null;
+  let campaignOffer: { compensation_type: string | null; offer_description: string | null; product_value: number | null } | null = null;
   if (deal.campaign_id) {
     const { data: c } = await supabase
       .from("campaigns")
-      .select("name")
+      .select("name, compensation_type, offer_description, product_value")
       .eq("id", deal.campaign_id)
       .maybeSingle();
     campaignName = c?.name ?? null;
+    if (c) campaignOffer = {
+      compensation_type: c.compensation_type ?? null,
+      offer_description: c.offer_description ?? null,
+      product_value: c.product_value ?? null,
+    };
   }
 
   // Resolve the counterparty (public view; no sensitive data).
@@ -190,6 +197,16 @@ export default async function DealDetailPage({
                 <div>
                   <span className="font-medium text-navy">Deliverables: </span>
                   {deal.product_description}
+                </div>
+              )}
+              {campaignOffer && compensationLabel(campaignOffer.compensation_type) && (
+                <div className="sm:col-span-2">
+                  <span className="font-medium text-navy">Offering: </span>
+                  {compensationLabel(campaignOffer.compensation_type)}
+                  {campaignOffer.offer_description ? ` · ${campaignOffer.offer_description}` : ""}
+                  {campaignOffer.product_value != null
+                    ? ` · product worth ${formatMoney(campaignOffer.product_value, deal.currency)}`
+                    : ""}
                 </div>
               )}
             </div>
