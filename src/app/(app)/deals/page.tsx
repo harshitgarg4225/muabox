@@ -32,16 +32,22 @@ function timeAgo(iso: string | null) {
   return days < 7 ? `${days}d ago` : new Date(iso).toLocaleDateString();
 }
 
+const SCOPES = ["action", "waiting", "accepted", "pitches"] as const;
+type Scope = (typeof SCOPES)[number] | undefined;
+
 export default async function DealsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ before?: string }>;
+  searchParams: Promise<{ before?: string; scope?: string }>;
 }) {
   const { user, profile } = await getUserAndProfile();
   if (!user || !profile) redirect("/login");
 
   const isArtist = profile.role === "artist";
-  const { before } = await searchParams;
+  const { before, scope: rawScope } = await searchParams;
+  const scope: Scope = (SCOPES as readonly string[]).includes(rawScope ?? "")
+    ? (rawScope as Scope)
+    : undefined;
   const supabase = await createClient();
 
   let query = supabase
@@ -50,6 +56,20 @@ export default async function DealsPage({
     .eq(isArtist ? "artist_id" : "brand_id", user.id)
     .order("last_message_at", { ascending: false, nullsFirst: false })
     .limit(PAGE + 1);
+
+  // Triage scopes — so nobody hunts through one long list. "action" (artist:
+  // offers awaiting me) and "waiting" (brand: invites awaiting them) are the
+  // same filter; the role scoping above flips who's who.
+  if (scope === "action" || scope === "waiting") {
+    query = query
+      .eq("initiated_by", "brand")
+      .in("status", ["sent", "viewed"]);
+  } else if (scope === "accepted") {
+    query = query.in("status", ["accepted", "completed"]);
+  } else if (scope === "pitches") {
+    query = query.eq("initiated_by", "artist");
+  }
+
   if (before) query = query.lt("last_message_at", before);
 
   const { data } = await query;
@@ -92,7 +112,7 @@ export default async function DealsPage({
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-bold text-navy">
-          {isArtist ? "Your deals" : "Sent deals"}
+          {isArtist ? "Your deals" : "Your deals"}
         </h1>
         {!isArtist && (
           <Button asChild variant="accent">
@@ -101,7 +121,44 @@ export default async function DealsPage({
         )}
       </div>
 
-      {deals.length === 0 ? (
+      <div className="flex flex-wrap gap-1 rounded-full bg-secondary p-1 text-sm w-fit">
+        {(isArtist
+          ? [
+              { key: undefined, label: "All" },
+              { key: "action", label: "Needs reply" },
+              { key: "accepted", label: "Accepted" },
+              { key: "pitches", label: "My pitches" },
+            ]
+          : [
+              { key: undefined, label: "All" },
+              { key: "pitches", label: "Pitches" },
+              { key: "waiting", label: "Awaiting reply" },
+              { key: "accepted", label: "Accepted" },
+            ]
+        ).map((t) => {
+          const active = scope === t.key;
+          return (
+            <Link
+              key={t.label}
+              href={t.key ? `/deals?scope=${t.key}` : "/deals"}
+              className={`rounded-full px-3 py-1 font-medium transition-colors ${
+                active ? "bg-navy text-white" : "text-muted-foreground hover:text-navy"
+              }`}
+            >
+              {t.label}
+            </Link>
+          );
+        })}
+      </div>
+
+      {deals.length === 0 && scope ? (
+        <EmptyState
+          emoji="🗂️"
+          title="Nothing here right now"
+          body="This view is empty — switch back to All to see every conversation."
+          action={{ label: "Show all deals", href: "/deals" }}
+        />
+      ) : deals.length === 0 ? (
         isArtist ? (
           <EmptyState
             emoji="📬"
@@ -185,7 +242,7 @@ export default async function DealsPage({
 
       <CursorPager
         basePath="/deals"
-        params={{}}
+        params={{ scope }}
         nextCursor={nextCursor}
         hasCursor={!!before}
       />

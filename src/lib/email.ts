@@ -51,12 +51,14 @@ export function emailLayout({
   ctaText,
   ctaPath,
   footnote,
+  greeting,
 }: {
   heading: string;
   intro: string;
   ctaText: string;
   ctaPath: string;
   footnote?: string;
+  greeting?: string;
 }): string {
   const href = `${APP_URL}${ctaPath}`;
   return `<!doctype html>
@@ -72,6 +74,11 @@ export function emailLayout({
           </td></tr>
           <tr><td style="padding:28px 24px;">
             <h1 style="margin:0 0 12px;font-size:20px;color:#0a1f44;">${heading}</h1>
+            ${
+              greeting
+                ? `<p style="margin:0 0 8px;font-size:15px;color:#3a4252;">${greeting}</p>`
+                : ""
+            }
             <p style="margin:0 0 24px;font-size:15px;line-height:1.5;color:#3a4252;">${intro}</p>
             <a href="${href}" style="display:inline-block;background:#ffc700;color:#0a1f44;text-decoration:none;font-weight:700;font-size:15px;padding:12px 22px;border-radius:12px;">${ctaText}</a>
             ${

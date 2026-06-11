@@ -56,8 +56,18 @@ export default async function BrandsPage() {
         <EmptyState
           emoji="🏷️"
           title="Brands are arriving"
-          body="Skincare brands are onboarding now. Keep your profile sharp and accepting deals — you'll be visible the moment they browse."
+          body="Skincare brands are onboarding now. Keep your profile sharp and accepting deals — you'll be visible the moment they browse. Worked with a brand you loved? Invite them."
           action={{ label: "Polish my profile", href: "/settings" }}
+          secondary={{
+            label: "Invite a brand",
+            href: `mailto:?subject=${encodeURIComponent(
+              "Find luxury makeup artists on Muabox"
+            )}&body=${encodeURIComponent(
+              "Hi! I'm on Muabox — a marketplace where skincare brands run budgeted PR campaigns with luxury makeup artists. You can browse artists, see real Instagram stats, and pay securely. Join here: " +
+                (process.env.NEXT_PUBLIC_APP_URL ?? "https://muabox.vercel.app") +
+                "/login?role=brand"
+            )}`,
+          }}
         />
       ) : (
         <div className="grid gap-4 sm:grid-cols-2">

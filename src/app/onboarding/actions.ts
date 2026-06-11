@@ -1,7 +1,9 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
+import { notifyWelcome } from "@/lib/notify";
 import type { UserRole } from "@/lib/types";
 
 export async function selectRole(formData: FormData) {
@@ -45,6 +47,8 @@ export async function selectRole(formData: FormData) {
         .insert({ id: user.id, company_name: fullName });
       if (error) throw error;
     }
+
+    after(() => notifyWelcome(user.id, role));
   }
 
   redirect("/dashboard");

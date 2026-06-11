@@ -29,6 +29,9 @@ export type Artist = {
   price_max: number | null;
   currency: string;
   specialties: string[];
+  rate_card: { deliverable: string; price: number | null }[];
+  collab_types: string[];
+  min_budget: number | null;
   created_at: string;
 };
 
@@ -53,6 +56,9 @@ export type Campaign = {
   budget: number | null;          // paise; null = no fixed budget
   status: CampaignStatus;
   target_specialties: string[];
+  compensation_type: string | null;
+  offer_description: string | null;
+  product_value: number | null;
   created_at: string;
 };
 
@@ -162,6 +168,9 @@ export type ArtistPublicStats = {
   created_at: string;
   engagement_rate: number | null;
   specialties: string[];
+  rate_card: { deliverable: string; price: number | null }[];
+  collab_types: string[];
+  min_budget: number | null;
 };
 
 export type ArtistPublicMedia = {

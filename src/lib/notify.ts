@@ -2,7 +2,13 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { sendEmail, emailLayout, esc } from "@/lib/email";
 import { logger } from "@/lib/logger";
-import { formatMoney, type DealStatus } from "@/lib/types";
+import { firstName } from "@/lib/greeting";
+import { formatMoney, type DealStatus, type UserRole } from "@/lib/types";
+
+function hi(name: string) {
+  const fn = firstName(name);
+  return fn ? `Hi ${esc(fn)},` : "Hi,";
+}
 
 /**
  * Email notifications for the deal lifecycle. Every function is fail-safe:
@@ -90,6 +96,7 @@ export async function notifyNewDeal(dealId: string) {
       to: artist.email,
       subject: `${brand.name} sent you a collab offer 💄`,
       html: emailLayout({
+        greeting: hi(artist.name),
         heading: "You have a new deal",
         intro: `<strong>${esc(brand.name)}</strong> wants to collaborate with you on Muabox. Budget: <strong>${esc(budget ?? "Open budget")}</strong>. Open the deal to read their offer and reply.`,
         ctaText: "View the deal",
@@ -175,6 +182,7 @@ export async function notifyPayment(dealId: string) {
       to: artist.email,
       subject: `You've been paid ${amount} 💸`,
       html: emailLayout({
+        greeting: hi(artist.name),
         heading: "Payment received",
         intro: `<strong>${esc(brand.name)}</strong> has paid <strong>${esc(amount ?? "your fee")}</strong> for your collaboration on Muabox.`,
         ctaText: "View the deal",
@@ -227,6 +235,7 @@ export async function notifyNewPitch(dealId: string) {
       to: brand.email,
       subject: `${artist.name} pitched you a collaboration ✨`,
       html: emailLayout({
+        greeting: hi(brand.name),
         heading: "You have a new pitch",
         intro: `<strong>${esc(artist.name)}</strong> would like to collaborate with your brand on Muabox${
           rate ? ` (proposed rate: <strong>${esc(rate)}</strong>)` : ""
@@ -251,10 +260,44 @@ export async function notifyReminder(dealId: string) {
       to: artist.email,
       subject: `Reminder: ${brand.name} is waiting on your reply`,
       html: emailLayout({
+        greeting: hi(artist.name),
         heading: "A brand is waiting on you",
         intro: `<strong>${esc(brand.name)}</strong> sent you a collab offer on Muabox and hasn't heard back yet. A quick accept or decline keeps your response rate strong.`,
         ctaText: "Respond now",
         ctaPath: `/deals/${dealId}`,
+      }),
+    });
+  } catch (err) {
+    logger.error("notification email failed", err);
+  }
+}
+
+export async function notifyWelcome(userId: string, role: UserRole) {
+  if (!enabled()) return;
+  try {
+    const admin = createAdminClient();
+    const { data: p } = await admin
+      .from("profiles")
+      .select("email, full_name, email_notifications")
+      .eq("id", userId)
+      .maybeSingle();
+    if (!p?.email || p.email_notifications === false) return;
+
+    const isArtist = role === "artist";
+    await sendEmail({
+      to: p.email,
+      subject: isArtist
+        ? "Welcome to Muabox — let's get you brand deals 💄"
+        : "Welcome to Muabox — find your artists 🤝",
+      html: emailLayout({
+        greeting: hi(p.full_name ?? ""),
+        heading: "Welcome to Muabox!",
+        intro: isArtist
+          ? "You're in. Connect your Instagram, set your rate card and flip on <strong>accepting deals</strong> — skincare brands browse the roster every day. Your dashboard walks you through it step by step."
+          : "You're in. Set up your brand profile, create your first campaign with a budget, and start inviting luxury makeup artists — your dashboard walks you through it step by step.",
+        ctaText: "Open my dashboard",
+        ctaPath: "/dashboard",
+        footnote: "Questions? Just reply to this email — a human reads it.",
       }),
     });
   } catch (err) {

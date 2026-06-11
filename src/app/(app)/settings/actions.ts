@@ -13,6 +13,7 @@ import {
 } from "@/lib/razorpay-route";
 import { reconcilePendingTransfers } from "@/lib/payouts";
 import { parseSpecialties } from "@/lib/specialties";
+import { parseRateCard, parseCollabTypes } from "@/lib/pricing";
 import { z } from "zod";
 import type { PricingModel } from "@/lib/types";
 
@@ -66,6 +67,7 @@ export async function updateArtistProfile(formData: FormData) {
     return Number.isFinite(n) && n >= 0 ? Math.round(n * 100) : null;
   };
 
+  const minBudget = toCents(formData.get("min_budget"));
   const update = {
     ...fields,
     price_min:
@@ -73,6 +75,9 @@ export async function updateArtistProfile(formData: FormData) {
     price_max:
       fields.pricing === "fixed" ? toCents(formData.get("price_max")) : null,
     specialties: parseSpecialties(formData.get("specialties") as string),
+    rate_card: parseRateCard(formData.get("rate_card") as string),
+    collab_types: parseCollabTypes(formData.get("collab_types") as string),
+    min_budget: minBudget,
   };
 
   const { error } = await supabase.from("artists").update(update).eq("id", user.id);

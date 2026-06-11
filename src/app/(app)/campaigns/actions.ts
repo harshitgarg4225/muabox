@@ -7,6 +7,7 @@ import { z } from "zod";
 import { requireUser } from "@/lib/action-auth";
 import { rateLimit } from "@/lib/rate-limit";
 import { parseSpecialties } from "@/lib/specialties";
+import { isCompensationType } from "@/lib/pricing";
 import { notifyNewDeal } from "@/lib/notify";
 import type { Campaign, Deal } from "@/lib/types";
 
@@ -15,6 +16,8 @@ const campaignSchema = z.object({
   description: z.string().trim().max(1000).optional(),
   product: z.string().trim().max(200).optional(),
   budget: z.number().int().min(0).max(10_00_00_000_00).nullable(), // ≤ ₹10 crore
+  offer_description: z.string().trim().max(300).optional(),
+  product_value: z.number().int().min(0).max(10_00_000_00).nullable(),
 });
 
 export async function createCampaign(formData: FormData) {
@@ -22,6 +25,8 @@ export async function createCampaign(formData: FormData) {
 
   const budgetRaw = formData.get("budget");
   const budgetNum = budgetRaw ? Number(budgetRaw) : NaN;
+  const pvRaw = formData.get("product_value");
+  const pvNum = pvRaw ? Number(pvRaw) : NaN;
   const parsed = campaignSchema.safeParse({
     name: ((formData.get("name") as string) ?? "").trim(),
     description: (formData.get("description") as string)?.trim() || undefined,
@@ -30,8 +35,15 @@ export async function createCampaign(formData: FormData) {
       Number.isFinite(budgetNum) && budgetNum > 0
         ? Math.round(budgetNum * 100)
         : null,
+    offer_description:
+      (formData.get("offer_description") as string)?.trim() || undefined,
+    product_value:
+      Number.isFinite(pvNum) && pvNum > 0 ? Math.round(pvNum * 100) : null,
   });
   if (!parsed.success) return { ok: false as const, reason: "invalid" };
+
+  const compRaw = (formData.get("compensation_type") as string) ?? "paid";
+  const compensationType = isCompensationType(compRaw) ? compRaw : "paid";
 
   const targetSpecialties = parseSpecialties(
     formData.get("target_specialties") as string
@@ -46,6 +58,9 @@ export async function createCampaign(formData: FormData) {
       product: parsed.data.product ?? null,
       budget: parsed.data.budget,
       target_specialties: targetSpecialties,
+      compensation_type: compensationType,
+      offer_description: parsed.data.offer_description ?? null,
+      product_value: parsed.data.product_value,
       status: "active",
     })
     .select("id")

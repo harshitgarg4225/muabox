@@ -13,6 +13,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MediaGallery } from "@/components/profile-stats";
+import { RateCardDisplay } from "@/components/rate-card-display";
 import { SendDealDialog } from "@/components/send-deal-dialog";
 import { SaveArtistButton } from "@/components/save-artist-button";
 import { engagementRate } from "@/lib/instagram";
@@ -41,9 +42,12 @@ export default async function ArtistDetailPage({
 }) {
   const { user, profile } = await getUserAndProfile();
   if (!user || !profile) redirect("/login");
-  if (profile.role !== "brand") redirect("/dashboard");
 
   const { id } = await params;
+  // Artists may preview their OWN public profile; everything else is brand-only.
+  const isSelf = profile.role === "artist" && user.id === id;
+  if (profile.role !== "brand" && !isSelf) redirect("/dashboard");
+
   const supabase = await createClient();
 
   const { data: artist } = await supabase
@@ -52,6 +56,25 @@ export default async function ArtistDetailPage({
     .eq("artist_id", id)
     .maybeSingle<ArtistPublicStats>();
 
+  if (!artist && isSelf) {
+    // Their public profile only exists while they're accepting deals.
+    return (
+      <div className="mx-auto max-w-lg space-y-4 py-16 text-center">
+        <span className="text-4xl">🪞</span>
+        <h1 className="text-xl font-bold text-navy">
+          Your public profile isn&apos;t live yet
+        </h1>
+        <p className="text-sm text-muted-foreground">
+          Brands can only see you while <strong>accepting deals</strong> is on
+          and your Instagram is connected. Flip it on and come back to preview
+          exactly what they&apos;ll see.
+        </p>
+        <Button asChild variant="accent">
+          <Link href="/dashboard#accepting">Go live</Link>
+        </Button>
+      </div>
+    );
+  }
   if (!artist) notFound();
 
   const { data: mediaData } = await supabase
@@ -61,30 +84,37 @@ export default async function ArtistDetailPage({
     .order("posted_at", { ascending: false });
   const media = (mediaData as ArtistPublicMedia[]) ?? [];
 
-  // Has this brand already sent a deal to this artist?
-  const { data: existingDeal } = await supabase
-    .from("deals")
-    .select("*")
-    .eq("brand_id", user.id)
-    .eq("artist_id", id)
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .maybeSingle<Deal>();
+  // Brand-only context (skip entirely when an artist previews themselves).
+  let existingDeal: Deal | null = null;
+  let savedRow: { artist_id: string } | null = null;
+  let campaigns: { id: string; name: string }[] = [];
+  if (!isSelf) {
+    const { data: ed } = await supabase
+      .from("deals")
+      .select("*")
+      .eq("brand_id", user.id)
+      .eq("artist_id", id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<Deal>();
+    existingDeal = ed ?? null;
 
-  const { data: savedRow } = await supabase
-    .from("saved_artists")
-    .select("artist_id")
-    .eq("brand_id", user.id)
-    .eq("artist_id", id)
-    .maybeSingle();
+    const { data: sr } = await supabase
+      .from("saved_artists")
+      .select("artist_id")
+      .eq("brand_id", user.id)
+      .eq("artist_id", id)
+      .maybeSingle();
+    savedRow = sr ?? null;
 
-  const { data: campaignRows } = await supabase
-    .from("campaigns")
-    .select("id, name")
-    .eq("brand_id", user.id)
-    .eq("status", "active")
-    .order("created_at", { ascending: false });
-  const campaigns = (campaignRows as { id: string; name: string }[]) ?? [];
+    const { data: campaignRows } = await supabase
+      .from("campaigns")
+      .select("id, name")
+      .eq("brand_id", user.id)
+      .eq("status", "active")
+      .order("created_at", { ascending: false });
+    campaigns = (campaignRows as { id: string; name: string }[]) ?? [];
+  }
 
   const er = engagementRate(media, artist.followers_count);
 
@@ -106,10 +136,19 @@ export default async function ArtistDetailPage({
   return (
     <div className="space-y-6">
       <Button asChild variant="ghost" size="sm">
-        <Link href="/discover">
-          <ArrowLeft /> Back to discover
+        <Link href={isSelf ? "/dashboard" : "/discover"}>
+          <ArrowLeft /> {isSelf ? "Back to dashboard" : "Back to discover"}
         </Link>
       </Button>
+
+      {isSelf && (
+        <div className="rounded-xl border border-navy/15 bg-navy/5 px-4 py-2.5 text-sm text-navy">
+          👀 This is exactly what brands see when they open your profile.{" "}
+          <Link href="/settings" className="font-medium underline">
+            Polish it in Settings
+          </Link>
+        </div>
+      )}
 
       <Card>
         <CardHeader className="flex-row items-center justify-between gap-4">
@@ -139,11 +178,14 @@ export default async function ArtistDetailPage({
             </div>
           </div>
           <div className="flex items-center gap-2">
+            {!isSelf && (
             <SaveArtistButton
               artistId={artist.artist_id}
               initialSaved={!!savedRow}
               withLabel
             />
+            )}
+            {!isSelf && (
             <SendDealDialog
               artistId={artist.artist_id}
               artistName={artist.display_name ?? artist.username ?? "this artist"}
@@ -152,6 +194,7 @@ export default async function ArtistDetailPage({
               alreadySent={!!existingDeal}
               campaigns={campaigns}
             />
+            )}
           </div>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -202,6 +245,26 @@ export default async function ArtistDetailPage({
           </div>
         </CardContent>
       </Card>
+
+      {((artist.collab_types?.length ?? 0) > 0 ||
+        (artist.rate_card?.length ?? 0) > 0 ||
+        artist.min_budget != null) && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base text-navy">
+              Rates &amp; collaborations
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <RateCardDisplay
+              collabTypes={artist.collab_types ?? []}
+              rateCard={artist.rate_card ?? []}
+              minBudget={artist.min_budget}
+              currency={artist.currency}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>

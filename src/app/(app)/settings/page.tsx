@@ -8,6 +8,7 @@ import { NotificationSettings } from "@/components/notification-settings";
 import { PitchToggle } from "@/components/pitch-toggle";
 import { DeleteAccountSection } from "@/components/delete-account-section";
 import { routeConfigured } from "@/lib/razorpay-route";
+import { PLATFORM_FEE_PERCENT } from "@/lib/payouts";
 import type { Artist, Brand, ArtistPayoutAccount } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -36,7 +37,11 @@ export default async function SettingsPage() {
       <div className="space-y-6">
         <h1 className="text-2xl font-bold text-navy">Profile &amp; pricing</h1>
         <ArtistSettingsForm artist={artist} />
-        <PayoutOnboardingForm account={payout ?? null} configured={routeConfigured()} />
+        <PayoutOnboardingForm
+          account={payout ?? null}
+          configured={routeConfigured()}
+          feePercent={PLATFORM_FEE_PERCENT}
+        />
         <NotificationSettings initial={profile.email_notifications} />
         <DeleteAccountSection />
       </div>
