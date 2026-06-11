@@ -87,6 +87,22 @@ export async function updateArtistProfile(formData: FormData) {
   revalidatePath("/dashboard");
 }
 
+export async function setWhatsapp(value: string) {
+  const { supabase, user } = await requireUser();
+  const clean = value.trim();
+  // Basic E.164-ish guard; empty clears it.
+  if (clean && !/^\+?[1-9]\d{7,14}$/.test(clean.replace(/[\s-]/g, ""))) {
+    return { ok: false as const, reason: "invalid" };
+  }
+  const { error } = await supabase
+    .from("profiles")
+    .update({ whatsapp: clean || null })
+    .eq("id", user.id);
+  if (error) throw error;
+  revalidatePath("/settings");
+  return { ok: true as const };
+}
+
 export async function setEmailNotifications(value: boolean) {
   const { supabase, user } = await requireUser();
   // Only the email_notifications column is client-updatable on profiles.

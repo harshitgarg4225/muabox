@@ -42,7 +42,7 @@ export default async function SettingsPage() {
           configured={routeConfigured()}
           feePercent={PLATFORM_FEE_PERCENT}
         />
-        <NotificationSettings initial={profile.email_notifications} />
+        <NotificationSettings initial={profile.email_notifications} whatsapp={profile.whatsapp} />
         <DeleteAccountSection />
       </div>
     );
@@ -60,7 +60,7 @@ export default async function SettingsPage() {
       <h1 className="text-2xl font-bold text-navy">Brand profile</h1>
       <BrandSettingsForm brand={brand} userId={user.id} />
       <PitchToggle initial={brand.open_to_pitches ?? true} />
-      <NotificationSettings initial={profile.email_notifications} />
+      <NotificationSettings initial={profile.email_notifications} whatsapp={profile.whatsapp} />
       <DeleteAccountSection />
     </div>
   );

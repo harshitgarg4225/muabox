@@ -14,6 +14,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { MediaGallery } from "@/components/profile-stats";
 import { RateCardDisplay } from "@/components/rate-card-display";
+import { StarRating } from "@/components/star-rating";
 import { SendDealDialog } from "@/components/send-deal-dialog";
 import { SaveArtistButton } from "@/components/save-artist-button";
 import { engagementRate } from "@/lib/instagram";
@@ -23,6 +24,9 @@ import {
   type ArtistPublicStats,
   type ArtistPublicMedia,
   type Deal,
+  type Rating,
+  type Review,
+  type BrandPublic,
 } from "@/lib/types";
 
 const DEAL_STATUS_LABEL: Record<string, string> = {
@@ -83,6 +87,31 @@ export default async function ArtistDetailPage({
     .eq("artist_id", id)
     .order("posted_at", { ascending: false });
   const media = (mediaData as ArtistPublicMedia[]) ?? [];
+
+  // Reputation: average rating + recent reviews of this artist.
+  const { data: ratingRow } = await supabase
+    .from("artist_ratings")
+    .select("avg_rating, review_count")
+    .eq("artist_id", id)
+    .maybeSingle<Rating>();
+  const { data: reviewRows } = await supabase
+    .from("reviews")
+    .select("*")
+    .eq("reviewee_id", id)
+    .order("created_at", { ascending: false })
+    .limit(10);
+  const reviews = (reviewRows as Review[]) ?? [];
+  const reviewerNames = new Map<string, string>();
+  if (reviews.length) {
+    const ids2 = [...new Set(reviews.map((r) => r.reviewer_id))];
+    const { data: bp } = await supabase
+      .from("brand_public")
+      .select("brand_id, company_name")
+      .in("brand_id", ids2);
+    (bp as Pick<BrandPublic, "brand_id" | "company_name">[] | null)?.forEach(
+      (b) => reviewerNames.set(b.brand_id, b.company_name ?? "A brand")
+    );
+  }
 
   // Brand-only context (skip entirely when an artist previews themselves).
   let existingDeal: Deal | null = null;
@@ -170,6 +199,13 @@ export default async function ArtistDetailPage({
                 {artist.display_name ?? artist.username}
               </CardTitle>
               <p className="text-sm text-muted-foreground">@{artist.username}</p>
+              {ratingRow && ratingRow.review_count > 0 && (
+                <StarRating
+                  value={ratingRow.avg_rating}
+                  count={ratingRow.review_count}
+                  className="mt-0.5"
+                />
+              )}
               {artist.location && (
                 <p className="flex items-center gap-1 text-sm text-muted-foreground">
                   <MapPin className="size-3.5" /> {artist.location}
@@ -262,6 +298,39 @@ export default async function ArtistDetailPage({
               minBudget={artist.min_budget}
               currency={artist.currency}
             />
+          </CardContent>
+        </Card>
+      )}
+
+      {reviews.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-base text-navy">
+              Reviews
+              {ratingRow && (
+                <StarRating
+                  value={ratingRow.avg_rating}
+                  count={ratingRow.review_count}
+                />
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            {reviews.map((r) => (
+              <div key={r.id} className="border-b pb-3 last:border-0 last:pb-0">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-navy">
+                    {reviewerNames.get(r.reviewer_id) ?? "A brand"}
+                  </span>
+                  <StarRating value={r.rating} />
+                </div>
+                {r.comment && (
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    “{r.comment}”
+                  </p>
+                )}
+              </div>
+            ))}
           </CardContent>
         </Card>
       )}

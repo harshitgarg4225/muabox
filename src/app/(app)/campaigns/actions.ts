@@ -86,6 +86,38 @@ export async function setCampaignStatus(
   revalidatePath("/campaigns");
 }
 
+/** Clone a campaign's brief/budget/targeting into a fresh active campaign. */
+export async function duplicateCampaign(campaignId: string) {
+  const { supabase, user } = await requireUser();
+  const { data: c } = await supabase
+    .from("campaigns")
+    .select("*")
+    .eq("id", campaignId)
+    .eq("brand_id", user.id)
+    .maybeSingle<Campaign>();
+  if (!c) return { ok: false as const };
+
+  const { data: created, error } = await supabase
+    .from("campaigns")
+    .insert({
+      brand_id: user.id,
+      name: `${c.name} (copy)`,
+      description: c.description,
+      product: c.product,
+      budget: c.budget,
+      target_specialties: c.target_specialties,
+      compensation_type: c.compensation_type,
+      offer_description: c.offer_description,
+      product_value: c.product_value,
+      status: "active",
+    })
+    .select("id")
+    .single();
+  if (error || !created) return { ok: false as const };
+  revalidatePath("/campaigns");
+  redirect(`/campaigns/${created.id}`);
+}
+
 const bulkSchema = z.object({
   campaignId: z.string().uuid(),
   artistIds: z.array(z.string().uuid()).min(1).max(25),

@@ -93,10 +93,15 @@ npm install
    live updates, `0004` adds Razorpay payments + INR defaults, `0005` adds
    artist payouts (Razorpay Route), `0006` adds admin + moderation flags,
    `0007` adds stored engagement + email preferences, `0008` adds campaigns,
-   pitches, reminders and luxury specialties.)
+   pitches, reminders and luxury specialties, `0009` adds detailed pricing
+   (rate cards) + campaign offering, `0010` adds reviews/ratings + WhatsApp.)
 3. Storage → create a **public** bucket named `logos` (for brand logos).
 4. Auth → for easy local testing, disable "Confirm email" (Auth → Providers →
    Email) so password sign-up logs you straight in.
+5. (Optional) Seed demo data so the marketplace isn't empty:
+   `npm run seed` (needs `SUPABASE_SERVICE_ROLE_KEY` in `.env.local`). Creates a
+   demo brand + six luxury MUAs. Log in with e.g. `brand@demo.muabox.app` /
+   `muabox-demo-123`.
 
 ### 3. Meta / Instagram (see SKILL §0 and §4)
 

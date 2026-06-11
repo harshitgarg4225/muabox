@@ -15,6 +15,7 @@ export type Profile = {
   is_admin: boolean;
   suspended: boolean;
   email_notifications: boolean;
+  whatsapp: string | null;
   created_at: string;
 };
 
@@ -195,6 +196,19 @@ export type BrandPublic = {
   description: string | null;
   open_to_pitches: boolean;
 };
+
+export type Review = {
+  id: string;
+  deal_id: string;
+  reviewer_id: string;
+  reviewee_id: string;
+  reviewer_role: UserRole;
+  rating: number;
+  comment: string | null;
+  created_at: string;
+};
+
+export type Rating = { avg_rating: number; review_count: number };
 
 /** Format minor currency units (paise) as a display string. */
 export function formatMoney(minor: number | null, currency = "INR") {

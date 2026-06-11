@@ -295,6 +295,9 @@ function SiteFooter() {
         </span>
         <span>© {new Date().getFullYear()} Muabox. All rights reserved.</span>
         <div className="flex gap-4">
+          <Link href="/help" className="hover:text-navy hover:underline">
+            Help
+          </Link>
           <Link href="/terms" className="hover:text-navy hover:underline">
             Terms
           </Link>

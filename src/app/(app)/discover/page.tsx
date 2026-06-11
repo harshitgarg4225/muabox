@@ -14,6 +14,7 @@ import type {
   ArtistPublicStats,
   ArtistPublicMedia,
   Deal,
+  Rating,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -49,13 +50,14 @@ export default async function DiscoverPage({
     saved?: string;
     before?: string;
     specialty?: string;
+    max_rate?: string;
   }>;
 }) {
   const { user, profile } = await getUserAndProfile();
   if (!user || !profile) redirect("/login");
   if (profile.role !== "brand") redirect("/dashboard");
 
-  const { q, location, tier, pricing, min_eng, sort, saved, before, specialty } =
+  const { q, location, tier, pricing, min_eng, sort, saved, before, specialty, max_rate } =
     await searchParams;
 
   const supabase = await createClient();
@@ -95,6 +97,10 @@ export default async function DiscoverPage({
   }
   if (specialty && (SPECIALTIES as readonly string[]).includes(specialty)) {
     query = query.contains("specialties", [specialty]);
+  }
+  if (max_rate && Number(max_rate) > 0) {
+    const cap = Math.round(Number(max_rate) * 100);
+    query = query.or(`min_budget.is.null,min_budget.lte.${cap}`);
   }
   if (saved) {
     const ids = [...savedSet];
@@ -153,18 +159,31 @@ export default async function DiscoverPage({
     });
   }
 
+  const ratingByArtist = new Map<string, Rating>();
+  if (ids.length) {
+    const { data: ratingRows } = await supabase
+      .from("artist_ratings")
+      .select("artist_id, avg_rating, review_count")
+      .in("artist_id", ids);
+    (ratingRows as (Rating & { artist_id: string })[] | null)?.forEach((r) =>
+      ratingByArtist.set(r.artist_id, r)
+    );
+  }
+
   const artists: DiscoverArtist[] = pageRows.map((a) => ({
     ...a,
     engagement: a.engagement_rate ?? 0,
     heroImage: heroByArtist.get(a.artist_id) ?? null,
     saved: savedSet.has(a.artist_id),
     dealStatus: dealStatusByArtist.get(a.artist_id) ?? null,
+    rating: ratingByArtist.get(a.artist_id)?.avg_rating ?? null,
+    reviewCount: ratingByArtist.get(a.artist_id)?.review_count ?? 0,
   }));
 
   const hasFilters = !!(
-    q || location || tier || pricing || min_eng || saved || specialty
+    q || location || tier || pricing || min_eng || saved || specialty || max_rate
   );
-  const pagerParams = { q, location, tier, pricing, min_eng, sort, saved, specialty };
+  const pagerParams = { q, location, tier, pricing, min_eng, sort, saved, specialty, max_rate };
 
   return (
     <div className="space-y-6">
@@ -186,7 +205,7 @@ export default async function DiscoverPage({
           <Search className="absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" />
           <Input name="q" defaultValue={q} placeholder="Search by name or @username" className="pl-9" />
         </div>
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-6">
           <div className="space-y-1">
             <Label htmlFor="location">Location</Label>
             <Input id="location" name="location" defaultValue={location} placeholder="Any" />
@@ -215,6 +234,10 @@ export default async function DiscoverPage({
           <div className="space-y-1">
             <Label htmlFor="min_eng">Min engagement %</Label>
             <Input id="min_eng" name="min_eng" type="number" min={0} step="0.5" defaultValue={min_eng} placeholder="Any" />
+          </div>
+          <div className="space-y-1">
+            <Label htmlFor="max_rate">My budget per artist (₹)</Label>
+            <Input id="max_rate" name="max_rate" type="number" min={0} step="1" defaultValue={max_rate} placeholder="Any" />
           </div>
           <div className="space-y-1">
             <Label htmlFor="pricing">Pricing</Label>

@@ -16,6 +16,7 @@ import { Button } from "@/components/ui/button";
 import { DealStatusBadge } from "@/components/deal-status-badge";
 import { RemindButton } from "@/components/remind-button";
 import { CampaignStatusButton } from "@/components/campaign-status-button";
+import { DuplicateCampaignButton } from "@/components/duplicate-campaign-button";
 import {
   BulkInviteForm,
   type InvitableArtist,
@@ -145,14 +146,40 @@ export default async function CampaignDetailPage({
       .in("artist_id", inviteIds)
       .order("followers_count", { ascending: false, nullsFirst: false })
       .limit(50);
-    invitable = ((pool as ArtistPublicStats[] | null) ?? []).map((a) => ({
-      artist_id: a.artist_id,
-      name: a.display_name ?? a.username ?? "Artist",
-      username: a.username,
-      avatar: a.profile_picture_url,
-      followers: a.followers_count,
-      engagement: a.engagement_rate,
-    }));
+    const targets = campaign.target_specialties ?? [];
+    const perArtistBudget =
+      campaign.budget != null ? campaign.budget : null;
+    invitable = ((pool as ArtistPublicStats[] | null) ?? [])
+      .map((a) => {
+        // Specialty fit (50), engagement (30), budget fit (20).
+        let specialtyScore = 25;
+        if (targets.length > 0) {
+          const overlap = (a.specialties ?? []).filter((s) =>
+            targets.includes(s)
+          ).length;
+          specialtyScore = Math.round((overlap / targets.length) * 50);
+        }
+        const engScore = Math.min(a.engagement_rate ?? 0, 10) * 3; // 0–30
+        let budgetScore = 10;
+        if (perArtistBudget != null) {
+          budgetScore =
+            a.min_budget == null || a.min_budget <= perArtistBudget ? 20 : 0;
+        }
+        const match = Math.min(
+          100,
+          Math.round(specialtyScore + engScore + budgetScore)
+        );
+        return {
+          artist_id: a.artist_id,
+          name: a.display_name ?? a.username ?? "Artist",
+          username: a.username,
+          avatar: a.profile_picture_url,
+          followers: a.followers_count,
+          engagement: a.engagement_rate,
+          match,
+        };
+      })
+      .sort((x, y) => y.match - x.match);
   }
 
   const roi = [
@@ -200,7 +227,10 @@ export default async function CampaignDetailPage({
             <p className="text-sm text-muted-foreground">{campaign.product}</p>
           )}
         </div>
-        <CampaignStatusButton campaignId={campaign.id} status={campaign.status} />
+        <div className="flex gap-2">
+          <DuplicateCampaignButton campaignId={campaign.id} />
+          <CampaignStatusButton campaignId={campaign.id} status={campaign.status} />
+        </div>
       </div>
 
       {(campaign.compensation_type ||

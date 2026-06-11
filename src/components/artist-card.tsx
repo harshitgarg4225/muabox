@@ -3,6 +3,7 @@ import Image from "next/image";
 import { MapPin, TrendingUp, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SaveArtistButton } from "@/components/save-artist-button";
+import { StarRating } from "@/components/star-rating";
 import { formatMoney, type ArtistPublicStats } from "@/lib/types";
 import { compact } from "@/lib/format";
 
@@ -11,6 +12,8 @@ export type DiscoverArtist = ArtistPublicStats & {
   heroImage: string | null;
   saved: boolean;
   dealStatus: string | null;
+  rating: number | null;
+  reviewCount: number;
 };
 
 export function ArtistCard({ artist }: { artist: DiscoverArtist }) {
@@ -80,6 +83,10 @@ export function ArtistCard({ artist }: { artist: DiscoverArtist }) {
               <span className="text-muted-foreground">eng.</span>
             </span>
           </div>
+
+          {artist.rating != null && artist.reviewCount > 0 && (
+            <StarRating value={artist.rating} count={artist.reviewCount} />
+          )}
 
           {artist.specialties?.length > 0 && (
             <div className="flex flex-wrap gap-1">
