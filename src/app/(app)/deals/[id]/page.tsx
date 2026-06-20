@@ -4,7 +4,7 @@ import { notFound, redirect } from "next/navigation";
 import { ArrowLeft } from "lucide-react";
 import { getUserAndProfile } from "@/lib/auth";
 import { createClient } from "@/lib/supabase/server";
-import { markDealRead } from "@/app/(app)/deals/actions";
+import { applyReadMarker } from "@/lib/deal-reads";
 import {
   Card,
   CardContent,
@@ -55,8 +55,9 @@ export default async function DealDetailPage({
 
   if (!deal) notFound();
 
-  // Mark read (and bump sent->viewed for the artist) before rendering.
-  await markDealRead(id);
+  // Mark read (and bump sent->viewed for the receiver) using the deal we just
+  // loaded — no second auth call or fetch, and it only writes when needed.
+  await applyReadMarker(supabase, deal, user.id);
 
   const { data: messageRows } = await supabase
     .from("deal_messages")

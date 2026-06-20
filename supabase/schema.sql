@@ -175,9 +175,13 @@ create table reviews (
 -- INDEXES
 create index instagram_media_account_idx on instagram_media (instagram_account_id);
 create index reviews_reviewee_idx on reviews (reviewee_id);
+create index reviews_deal_idx on reviews (deal_id);
 create index deals_artist_idx on deals (artist_id);
 create index deals_brand_idx on deals (brand_id);
 create index deals_campaign_idx on deals (campaign_id);
+-- Inbox sorts by recent activity per participant; serve sort straight from index.
+create index deals_brand_recent_idx on deals (brand_id, last_message_at desc);
+create index deals_artist_recent_idx on deals (artist_id, last_message_at desc);
 create index campaigns_brand_idx on campaigns (brand_id);
 create index deal_messages_deal_idx on deal_messages (deal_id, created_at);
 create index payments_deal_idx on payments (deal_id);

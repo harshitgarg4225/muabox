@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { after } from "next/server";
 import { z } from "zod";
 import { requireUser } from "@/lib/action-auth";
+import { applyReadMarker } from "@/lib/deal-reads";
 import { rateLimit } from "@/lib/rate-limit";
 import {
   notifyNewDeal,
@@ -314,19 +315,10 @@ export async function markDealRead(dealId: string) {
 
   const { data: deal } = await supabase
     .from("deals")
-    .select("brand_id, artist_id, status, initiated_by")
+    .select("id, brand_id, artist_id, status, initiated_by, artist_read_at, brand_read_at")
     .eq("id", dealId)
     .maybeSingle();
   if (!deal) return;
 
-  const isBrand = deal.brand_id === user.id;
-  const patch: Record<string, unknown> = {
-    [isBrand ? "brand_read_at" : "artist_read_at"]: new Date().toISOString(),
-  };
-  // First time the RECEIVER opens a fresh offer/pitch, bump 'sent' -> 'viewed'.
-  const isReceiver =
-    deal.initiated_by === "artist" ? isBrand : !isBrand;
-  if (isReceiver && deal.status === "sent") patch.status = "viewed";
-
-  await supabase.from("deals").update(patch).eq("id", dealId);
+  await applyReadMarker(supabase, deal, user.id);
 }
