@@ -7,6 +7,7 @@ export type ReadMarkerDeal = {
   artist_id: string;
   status: string;
   initiated_by: string;
+  last_message_at?: string | null;
   artist_read_at?: string | null;
   brand_read_at?: string | null;
 };
@@ -31,12 +32,15 @@ export async function applyReadMarker(
   const isReceiver = deal.initiated_by === "artist" ? isBrand : !isBrand;
   const shouldBump = isReceiver && deal.status === "sent";
 
-  // Skip the write if the read marker is already fresh and no status bump is
-  // due. We treat any marker within the last minute as fresh enough.
+  // Skip the write when there's no status bump due AND the viewer's marker
+  // already covers the latest activity (i.e. nothing new to mark read). This
+  // avoids write-on-every-open without ever leaving a just-read deal looking
+  // unread.
   const currentMarker = isBrand ? deal.brand_read_at : deal.artist_read_at;
-  const markerFresh =
-    !!currentMarker && Date.now() - new Date(currentMarker).getTime() < 60_000;
-  if (markerFresh && !shouldBump) return false;
+  const alreadyCaughtUp =
+    !!currentMarker &&
+    (!deal.last_message_at || currentMarker >= deal.last_message_at);
+  if (alreadyCaughtUp && !shouldBump) return false;
 
   const patch: Record<string, unknown> = {
     [isBrand ? "brand_read_at" : "artist_read_at"]: new Date().toISOString(),

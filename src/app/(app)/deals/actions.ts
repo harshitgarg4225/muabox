@@ -315,7 +315,7 @@ export async function markDealRead(dealId: string) {
 
   const { data: deal } = await supabase
     .from("deals")
-    .select("id, brand_id, artist_id, status, initiated_by, artist_read_at, brand_read_at")
+    .select("id, brand_id, artist_id, status, initiated_by, last_message_at, artist_read_at, brand_read_at")
     .eq("id", dealId)
     .maybeSingle();
   if (!deal) return;
