@@ -8,7 +8,8 @@ import { Badge } from "@/components/ui/badge";
 import { EmptyState } from "@/components/empty-state";
 import { PitchDialog } from "@/components/pitch-dialog";
 import { DealStatusBadge } from "@/components/deal-status-badge";
-import type { BrandPublic, Deal, DealStatus } from "@/lib/types";
+import { StarRating } from "@/components/star-rating";
+import type { BrandPublic, Deal, DealStatus, Rating } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +42,20 @@ export default async function BrandsPage() {
       pitchStatus.set(p.brand_id, p.status);
     }
   });
+
+  // Brand reputation — so artists can vet who they pitch (symmetry with the
+  // ratings brands see on artists).
+  const ratingByBrand = new Map<string, Rating>();
+  const brandIds = brands.map((b) => b.brand_id);
+  if (brandIds.length) {
+    const { data: ratingRows } = await supabase
+      .from("brand_ratings")
+      .select("brand_id, avg_rating, review_count")
+      .in("brand_id", brandIds);
+    (ratingRows as (Rating & { brand_id: string })[] | null)?.forEach((r) =>
+      ratingByBrand.set(r.brand_id, r)
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -95,6 +110,16 @@ export default async function BrandsPage() {
                         <div className="truncate font-semibold text-navy">
                           {b.company_name}
                         </div>
+                        {(() => {
+                          const r = ratingByBrand.get(b.brand_id);
+                          return r && r.review_count > 0 ? (
+                            <StarRating
+                              value={r.avg_rating}
+                              count={r.review_count}
+                              className="mt-0.5"
+                            />
+                          ) : null;
+                        })()}
                         {b.website && (
                           <a
                             href={b.website}

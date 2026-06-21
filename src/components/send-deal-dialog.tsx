@@ -38,6 +38,7 @@ export function SendDealDialog({
   pricingHint,
   alreadySent = false,
   campaigns = [],
+  fullWidth = false,
 }: {
   artistId: string;
   artistName: string;
@@ -45,6 +46,7 @@ export function SendDealDialog({
   pricingHint?: string;
   alreadySent?: boolean;
   campaigns?: { id: string; name: string }[];
+  fullWidth?: boolean;
 }) {
   const [campaignId, setCampaignId] = useState("");
   const router = useRouter();
@@ -86,7 +88,10 @@ export function SendDealDialog({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={alreadySent ? "outline" : "accent"}>
+        <Button
+          variant={alreadySent ? "outline" : "accent"}
+          className={fullWidth ? "w-full" : undefined}
+        >
           <Handshake /> {alreadySent ? "Send another deal" : "Send a deal"}
         </Button>
       </DialogTrigger>

@@ -159,6 +159,17 @@ export default async function DiscoverPage({
     });
   }
 
+  // Active campaigns power the "Send a deal" quick action on each card (one
+  // query for the whole grid, not per card).
+  const { data: campaignRows } = await supabase
+    .from("campaigns")
+    .select("id, name")
+    .eq("brand_id", user.id)
+    .eq("status", "active")
+    .order("created_at", { ascending: false });
+  const activeCampaigns =
+    (campaignRows as { id: string; name: string }[] | null) ?? [];
+
   const ratingByArtist = new Map<string, Rating>();
   if (ids.length) {
     const { data: ratingRows } = await supabase
@@ -303,7 +314,7 @@ export default async function DiscoverPage({
         <>
           <div className="grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
             {artists.map((a) => (
-              <ArtistCard key={a.artist_id} artist={a} />
+              <ArtistCard key={a.artist_id} artist={a} campaigns={activeCampaigns} />
             ))}
           </div>
           <CursorPager

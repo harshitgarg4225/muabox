@@ -3,6 +3,7 @@ import Image from "next/image";
 import { MapPin, TrendingUp, Check } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { SaveArtistButton } from "@/components/save-artist-button";
+import { SendDealDialog } from "@/components/send-deal-dialog";
 import { StarRating } from "@/components/star-rating";
 import { formatMoney, type ArtistPublicStats } from "@/lib/types";
 import { compact } from "@/lib/format";
@@ -16,7 +17,21 @@ export type DiscoverArtist = ArtistPublicStats & {
   reviewCount: number;
 };
 
-export function ArtistCard({ artist }: { artist: DiscoverArtist }) {
+export function ArtistCard({
+  artist,
+  campaigns = [],
+}: {
+  artist: DiscoverArtist;
+  campaigns?: { id: string; name: string }[];
+}) {
+  const pricingHint =
+    artist.pricing === "fixed" && artist.price_min != null
+      ? `Listed rate: ${formatMoney(artist.price_min, artist.currency)}${
+          artist.price_max != null
+            ? `–${formatMoney(artist.price_max, artist.currency)}`
+            : "+"
+        }`
+      : "This artist asks brands to contact them for pricing.";
   return (
     <div className="group relative overflow-hidden rounded-2xl border bg-card shadow-soft transition-all hover:-translate-y-1 hover:shadow-lift">
       <SaveArtistButton
@@ -126,6 +141,20 @@ export function ArtistCard({ artist }: { artist: DiscoverArtist }) {
           </div>
         </div>
       </Link>
+
+      {/* Quick action — outside the card-wide link so brands can pitch without
+          opening the full profile first. */}
+      <div className="px-4 pb-4">
+        <SendDealDialog
+          artistId={artist.artist_id}
+          artistName={artist.display_name ?? artist.username ?? "this artist"}
+          defaultCurrency={artist.currency ?? "INR"}
+          pricingHint={pricingHint}
+          alreadySent={!!artist.dealStatus}
+          campaigns={campaigns}
+          fullWidth
+        />
+      </div>
     </div>
   );
 }
