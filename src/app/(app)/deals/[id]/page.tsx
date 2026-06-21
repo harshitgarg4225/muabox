@@ -32,6 +32,7 @@ import {
   type ArtistPublicStats,
   type BrandPublic,
   type Review,
+  type Rating,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -122,10 +123,11 @@ export default async function DealDetailPage({
     theirReview = rows.find((r) => r.reviewer_id !== user.id) ?? null;
   }
 
-  // Resolve the counterparty (public view; no sensitive data).
+  // Resolve the counterparty (public view; no sensitive data) + their rating.
   let counterpartyName = profile.role === "artist" ? "A brand" : "Artist";
   let counterpartyAvatar: string | null = null;
   let counterpartyHref: string | null = null;
+  let counterpartyRating: Rating | null = null;
 
   if (profile.role === "artist") {
     const { data: brand } = await supabase
@@ -137,6 +139,12 @@ export default async function DealDetailPage({
       counterpartyName = brand.company_name ?? "A brand";
       counterpartyAvatar = brand.logo_url;
     }
+    const { data: r } = await supabase
+      .from("brand_ratings")
+      .select("avg_rating, review_count")
+      .eq("brand_id", deal.brand_id)
+      .maybeSingle<Rating>();
+    counterpartyRating = r ?? null;
   } else {
     const { data: artist } = await supabase
       .from("artist_public_stats")
@@ -148,6 +156,12 @@ export default async function DealDetailPage({
       counterpartyAvatar = artist.profile_picture_url;
       counterpartyHref = `/artists/${deal.artist_id}`;
     }
+    const { data: r } = await supabase
+      .from("artist_ratings")
+      .select("avg_rating, review_count")
+      .eq("artist_id", deal.artist_id)
+      .maybeSingle<Rating>();
+    counterpartyRating = r ?? null;
   }
 
   return (
@@ -192,6 +206,13 @@ export default async function DealDetailPage({
                     ? "sent you a collab offer"
                     : "your collab offer"}
               </p>
+              {counterpartyRating && counterpartyRating.review_count > 0 && (
+                <StarRating
+                  value={counterpartyRating.avg_rating}
+                  count={counterpartyRating.review_count}
+                  className="mt-0.5"
+                />
+              )}
               {campaignName && (
                 <p className="text-xs text-muted-foreground">
                   Campaign: {campaignName}
