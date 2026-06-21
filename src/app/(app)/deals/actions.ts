@@ -30,7 +30,7 @@ const REMINDER_COOLDOWN_MS = 48 * 60 * 60 * 1000;
 export async function sendDeal(formData: FormData) {
   const { supabase, user } = await requireUser();
 
-  const limit = rateLimit(`send-deal:${user.id}`, 20, 60_000);
+  const limit = await rateLimit(`send-deal:${user.id}`, 20, 60_000);
   if (!limit.ok) return { ok: false as const, reason: "rate_limited" };
 
   const amountRaw = formData.get("offer_amount");
@@ -121,7 +121,7 @@ const pitchSchema = z.object({
 export async function sendPitch(formData: FormData) {
   const { supabase, user } = await requireUser();
 
-  const limit = rateLimit(`pitch:${user.id}`, 10, 60_000);
+  const limit = await rateLimit(`pitch:${user.id}`, 10, 60_000);
   if (!limit.ok) return { ok: false as const, reason: "rate_limited" };
 
   const amountRaw = formData.get("proposed_amount");
@@ -248,7 +248,7 @@ export async function completeDeal(dealId: string) {
 export async function remindDeal(dealId: string) {
   const { supabase, user } = await requireUser();
 
-  const limit = rateLimit(`remind:${user.id}`, 20, 60_000 * 10);
+  const limit = await rateLimit(`remind:${user.id}`, 20, 60_000 * 10);
   if (!limit.ok) return { ok: false as const, reason: "rate_limited" };
 
   const { data: deal } = await supabase
@@ -308,7 +308,7 @@ export async function withdrawDeal(dealId: string) {
 
 export async function sendMessage(dealId: string, body: string) {
   const { supabase, user } = await requireUser();
-  const limit = rateLimit(`msg:${user.id}`, 30, 60_000);
+  const limit = await rateLimit(`msg:${user.id}`, 30, 60_000);
   if (!limit.ok) return { ok: false as const };
   const text = body.trim().slice(0, 4000); // cap length server-side
   if (!text) return { ok: false as const };

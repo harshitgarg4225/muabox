@@ -181,7 +181,7 @@ export async function saveShippingAddress(
   }
 ): Promise<Ok | Fail> {
   const { supabase, user } = await requireUser();
-  const limit = rateLimit(`ship-addr:${user.id}`, 20, 60_000);
+  const limit = await rateLimit(`ship-addr:${user.id}`, 20, 60_000);
   if (!limit.ok) return { ok: false, reason: "rate_limited" };
 
   const parsed = addressSchema.safeParse(input);
