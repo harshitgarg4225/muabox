@@ -23,6 +23,10 @@ import { withdrawDeal } from "@/app/(app)/deals/actions";
 import { ReviewForm } from "@/components/review-form";
 import { StarRating } from "@/components/star-rating";
 import { LocalDate } from "@/components/local-date";
+import { DeliverablesSection } from "@/components/deliverables-section";
+import { BriefCard, type Brief } from "@/components/brief-card";
+import { ShipmentSection } from "@/components/shipment-section";
+import { PromoCodeCallout } from "@/components/promo-code-callout";
 import { compensationLabel } from "@/lib/pricing";
 import { PLATFORM_FEE_PERCENT, artistShare } from "@/lib/payouts";
 import {
@@ -33,6 +37,9 @@ import {
   type BrandPublic,
   type Review,
   type Rating,
+  type DealDeliverable,
+  type DealShipment,
+  type PromoCode,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -95,19 +102,80 @@ export default async function DealDetailPage({
   // Campaign context, if this deal belongs to one.
   let campaignName: string | null = null;
   let campaignOffer: { compensation_type: string | null; offer_description: string | null; product_value: number | null } | null = null;
+  let brief: Brief | null = null;
+  let isGifting = false;
   if (deal.campaign_id) {
     const { data: c } = await supabase
       .from("campaigns")
-      .select("name, compensation_type, offer_description, product_value")
+      .select(
+        "name, compensation_type, offer_description, product_value, required_hashtags, required_mentions, dos, donts, disclosure_required"
+      )
       .eq("id", deal.campaign_id)
       .maybeSingle();
     campaignName = c?.name ?? null;
-    if (c) campaignOffer = {
-      compensation_type: c.compensation_type ?? null,
-      offer_description: c.offer_description ?? null,
-      product_value: c.product_value ?? null,
-    };
+    if (c) {
+      campaignOffer = {
+        compensation_type: c.compensation_type ?? null,
+        offer_description: c.offer_description ?? null,
+        product_value: c.product_value ?? null,
+      };
+      isGifting =
+        c.compensation_type === "gifted" || c.compensation_type === "paid_product";
+      const b: Brief = {
+        required_hashtags: c.required_hashtags ?? [],
+        required_mentions: c.required_mentions ?? [],
+        dos: c.dos ?? null,
+        donts: c.donts ?? null,
+        disclosure_required: !!c.disclosure_required,
+      };
+      // Only surface the brief card if there's something in it.
+      if (
+        b.required_hashtags.length ||
+        b.required_mentions.length ||
+        b.dos ||
+        b.donts ||
+        b.disclosure_required
+      ) {
+        brief = b;
+      }
+    }
   }
+
+  // Execution layer: deliverables, shipment, and the artist's promo code —
+  // only relevant once the collaboration is on, so we skip the queries on
+  // still-pending offers/pitches.
+  const collaborating =
+    deal.status === "accepted" || deal.status === "completed" || !!deal.paid_at;
+
+  let deliverables: DealDeliverable[] = [];
+  let shipment: DealShipment | null = null;
+  if (collaborating) {
+    const { data: deliverableRows } = await supabase
+      .from("deal_deliverables")
+      .select("*")
+      .eq("deal_id", id)
+      .order("created_at", { ascending: true });
+    deliverables = (deliverableRows as DealDeliverable[] | null) ?? [];
+
+    const { data: shipmentRow } = await supabase
+      .from("deal_shipments")
+      .select("*")
+      .eq("deal_id", id)
+      .maybeSingle<DealShipment>();
+    shipment = shipmentRow ?? null;
+  }
+
+  let promoCode: PromoCode | null = null;
+  if (deal.campaign_id) {
+    const { data: pc } = await supabase
+      .from("promo_codes")
+      .select("*")
+      .eq("campaign_id", deal.campaign_id)
+      .eq("artist_id", deal.artist_id)
+      .maybeSingle<PromoCode>();
+    promoCode = pc ?? null;
+  }
+  const showSeeding = collaborating && (isGifting || !!shipment);
 
   // Reviews for this deal (both directions).
   const reviewable = deal.status === "accepted" || deal.status === "completed";
@@ -346,6 +414,64 @@ export default async function DealDetailPage({
             )}
         </CardContent>
       </Card>
+
+      {/* The artist's promo code for this campaign. */}
+      {promoCode && (
+        <PromoCodeCallout promo={promoCode} role={profile.role} />
+      )}
+
+      {/* Creative brief + ASCI disclosure. */}
+      {brief && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base text-navy">Creative brief</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <BriefCard
+              dealId={deal.id}
+              role={profile.role}
+              brief={brief}
+              disclosureConfirmedAt={deal.disclosure_confirmed_at}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Deliverables & content proof — once the collaboration is on. */}
+      {collaborating && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base text-navy">
+              Deliverables &amp; proof
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DeliverablesSection
+              dealId={deal.id}
+              role={profile.role}
+              deliverables={deliverables}
+            />
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Product seeding logistics — gifting deals. */}
+      {showSeeding && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-base text-navy">
+              Product shipping
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <ShipmentSection
+              dealId={deal.id}
+              role={profile.role}
+              shipment={shipment}
+            />
+          </CardContent>
+        </Card>
+      )}
 
       {reviewable && (
         <Card>

@@ -21,6 +21,11 @@ import {
   BulkInviteForm,
   type InvitableArtist,
 } from "@/components/bulk-invite-form";
+import { CampaignBriefForm } from "@/components/campaign-brief-form";
+import {
+  PromoCodesManager,
+  type PromoRow,
+} from "@/components/promo-codes-manager";
 import { compact } from "@/lib/format";
 import { compensationLabel } from "@/lib/pricing";
 import {
@@ -28,6 +33,7 @@ import {
   type Campaign,
   type Deal,
   type ArtistPublicStats,
+  type PromoCode,
 } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -87,6 +93,29 @@ export default async function CampaignDetailPage({
       statsById.set(a.artist_id, a)
     );
   }
+
+  // Promo codes on this campaign → attributed-sales rollup + manager rows.
+  const { data: promoRows } = await supabase
+    .from("promo_codes")
+    .select("*")
+    .eq("campaign_id", id)
+    .order("created_at", { ascending: false });
+  const promoCodes = (promoRows as PromoCode[] | null) ?? [];
+  const artistName = (aid: string) => {
+    const a = statsById.get(aid);
+    return a?.display_name ?? a?.username ?? "Artist";
+  };
+  const promoManagerRows: PromoRow[] = promoCodes.map((p) => ({
+    ...p,
+    artistName: artistName(p.artist_id),
+  }));
+  const codeRedemptions = promoCodes.reduce((s, p) => s + p.redemptions, 0);
+  const codeRevenue = promoCodes.reduce((s, p) => s + p.revenue, 0);
+  // Artists on the campaign who don't yet have a code (for the assign dropdown).
+  const codedArtists = new Set(promoCodes.map((p) => p.artist_id));
+  const assignableArtists = [...new Set(deals.map((d) => d.artist_id))]
+    .filter((aid) => !codedArtists.has(aid))
+    .map((aid) => ({ id: aid, name: artistName(aid) }));
 
   const acceptedStats = acceptedDeals
     .map((d) => statsById.get(d.artist_id))
@@ -200,6 +229,12 @@ export default async function CampaignDetailPage({
       label: "Est. cost / 1K reach",
       value: costPer1k != null ? formatMoney(costPer1k, "INR") : "—",
     },
+    ...(promoCodes.length > 0
+      ? [
+          { label: "Code redemptions", value: compact(codeRedemptions) },
+          { label: "Sales via codes", value: formatMoney(codeRevenue, "INR") },
+        ]
+      : []),
   ];
 
   return (
@@ -264,6 +299,27 @@ export default async function CampaignDetailPage({
         </Card>
       )}
 
+      {/* Creative brief */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base text-navy">Creative brief</CardTitle>
+          <CardDescription>
+            Required hashtags, mentions and do&apos;s &amp; don&apos;ts — every
+            artist on this campaign sees these on their deal.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <CampaignBriefForm
+            campaignId={campaign.id}
+            requiredHashtags={campaign.required_hashtags ?? []}
+            requiredMentions={campaign.required_mentions ?? []}
+            dos={campaign.dos}
+            donts={campaign.donts}
+            disclosureRequired={campaign.disclosure_required}
+          />
+        </CardContent>
+      </Card>
+
       {/* ROI summary */}
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         {roi.map((m) => (
@@ -275,6 +331,26 @@ export default async function CampaignDetailPage({
           </Card>
         ))}
       </div>
+
+      {/* Promo codes for sales attribution */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-base text-navy">
+            Promo codes &amp; sales
+          </CardTitle>
+          <CardDescription>
+            Give each creator a unique code, then log redemptions and sales to
+            see the real revenue this campaign drove.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <PromoCodesManager
+            campaignId={campaign.id}
+            codes={promoManagerRows}
+            assignableArtists={assignableArtists}
+          />
+        </CardContent>
+      </Card>
 
       {/* Audience snapshot */}
       {acceptedStats.length > 0 && (

@@ -60,6 +60,11 @@ export type Campaign = {
   compensation_type: string | null;
   offer_description: string | null;
   product_value: number | null;
+  required_hashtags: string[];
+  required_mentions: string[];
+  dos: string | null;
+  donts: string | null;
+  disclosure_required: boolean;
   created_at: string;
 };
 
@@ -111,8 +116,62 @@ export type Deal = {
   campaign_id: string | null;
   initiated_by: UserRole;
   reminded_at: string | null;
+  disclosure_confirmed_at: string | null;
   created_at: string;
   updated_at: string;
+};
+
+export type DeliverableStatus =
+  | "pending"
+  | "submitted"
+  | "approved"
+  | "changes_requested";
+
+export type DealDeliverable = {
+  id: string;
+  deal_id: string;
+  label: string;
+  post_url: string | null;
+  status: DeliverableStatus;
+  review_note: string | null;
+  submitted_at: string | null;
+  reviewed_at: string | null;
+  created_at: string;
+};
+
+export type ShipmentStatus =
+  | "pending"
+  | "address_provided"
+  | "shipped"
+  | "delivered";
+
+export type DealShipment = {
+  deal_id: string;
+  recipient_name: string | null;
+  address_line: string | null;
+  city: string | null;
+  state: string | null;
+  pincode: string | null;
+  phone: string | null;
+  courier: string | null;
+  tracking_number: string | null;
+  status: ShipmentStatus;
+  shipped_at: string | null;
+  delivered_at: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
+export type PromoCode = {
+  id: string;
+  campaign_id: string;
+  brand_id: string;
+  artist_id: string;
+  code: string;
+  description: string | null;
+  redemptions: number;
+  revenue: number; // attributed sales, paise
+  created_at: string;
 };
 
 export type Payment = {
