@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { verifyWebhookSignature } from "@/lib/razorpay";
 import { notifyPayment } from "@/lib/notify";
 import { attemptTransfer } from "@/lib/payouts";
+import { logger } from "@/lib/logger";
 import type { Payment } from "@/lib/types";
 
 export const dynamic = "force-dynamic";
@@ -45,7 +46,13 @@ export async function POST(req: Request) {
         .eq("razorpay_order_id", orderId)
         .maybeSingle();
 
-      if (payment && payment.status !== "paid") {
+      if (!payment) {
+        // No matching order — log so we can reconcile (e.g. cross-env order).
+        logger.error("razorpay webhook: captured payment with no matching order", null, {
+          orderId,
+          paymentId,
+        });
+      } else if (payment.status !== "paid") {
         const now = new Date().toISOString();
         // Atomically claim the capture (only from 'created'). This makes the
         // webhook idempotent against retries/replays and against the verify
@@ -77,6 +84,19 @@ export async function POST(req: Request) {
           await notifyPayment(payment.deal_id);
         }
       }
+    }
+  }
+
+  // Reconcile a failed payment so it doesn't linger as 'created'.
+  if (event.event === "payment.failed") {
+    const orderId = event.payload?.payment?.entity?.order_id;
+    if (orderId) {
+      const admin = createAdminClient();
+      await admin
+        .from("payments")
+        .update({ status: "failed", updated_at: new Date().toISOString() })
+        .eq("razorpay_order_id", orderId)
+        .eq("status", "created");
     }
   }
 

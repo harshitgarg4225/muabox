@@ -1,6 +1,6 @@
 "use client";
 
-import { useTransition } from "react";
+import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { Check, X, CheckCheck } from "lucide-react";
 import { toast } from "sonner";
@@ -22,8 +22,13 @@ export function DealActions({
 }) {
   const router = useRouter();
   const [pending, startTransition] = useTransition();
+  // Shared across Accept/Decline/Complete so a rapid second click on a sibling
+  // can't fire a second (already-resolved) action and flash a spurious error.
+  const [busy, setBusy] = useState(false);
+  const locked = pending || busy;
 
   function accept() {
+    setBusy(true);
     startTransition(async () => {
       try {
         await respondToDeal(dealId, "accepted");
@@ -33,6 +38,7 @@ export function DealActions({
         router.refresh();
       } catch {
         toast.error("Couldn't update the deal.");
+        setBusy(false);
       }
     });
   }
@@ -51,7 +57,7 @@ export function DealActions({
     <div className="flex flex-wrap gap-2">
       {canRespond && (
         <>
-          <Button variant="accent" disabled={pending} onClick={accept}>
+          <Button variant="accent" disabled={locked} onClick={accept}>
             <Check /> Accept
           </Button>
           <ConfirmButton
@@ -59,6 +65,8 @@ export function DealActions({
             icon={<X />}
             variant="outline"
             size="default"
+            disabled={locked}
+            onPendingChange={setBusy}
             title={`Decline this ${thing}?`}
             description={`This can't be undone — the ${thing} will be closed and the other side notified. You can always work together on a future collaboration.`}
             confirmLabel="Yes, decline"
@@ -73,6 +81,8 @@ export function DealActions({
           icon={<CheckCheck />}
           variant="outline"
           size="default"
+          disabled={locked}
+          onPendingChange={setBusy}
           title="Mark this collaboration complete?"
           description="Use this once the work is delivered. It closes out the deal — you'll both be able to leave a review."
           confirmLabel="Mark completed"

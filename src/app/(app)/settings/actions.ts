@@ -54,13 +54,15 @@ const payoutSchema = z.object({
 export async function updateArtistProfile(formData: FormData) {
   const { supabase, user } = await requireUser();
 
-  const fields = artistProfileSchema.parse({
+  const parsed = artistProfileSchema.safeParse({
     display_name: (formData.get("display_name") as string)?.trim() || null,
     bio: (formData.get("bio") as string)?.trim() || null,
     location: (formData.get("location") as string)?.trim() || null,
     pricing: (formData.get("pricing") as PricingModel) ?? "custom",
     currency: ((formData.get("currency") as string) || "INR").toUpperCase(),
   });
+  if (!parsed.success) return { ok: false as const, reason: "validation" };
+  const fields = parsed.data;
 
   const toCents = (v: FormDataEntryValue | null) => {
     const n = v ? Number(v) : NaN;
@@ -81,10 +83,11 @@ export async function updateArtistProfile(formData: FormData) {
   };
 
   const { error } = await supabase.from("artists").update(update).eq("id", user.id);
-  if (error) throw error;
+  if (error) return { ok: false as const, reason: "failed" };
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+  return { ok: true as const };
 }
 
 export async function setWhatsapp(value: string) {
@@ -284,16 +287,21 @@ export async function deleteAccount() {
 export async function updateBrandProfile(formData: FormData) {
   const { supabase, user } = await requireUser();
 
-  const update = brandProfileSchema.parse({
+  const parsed = brandProfileSchema.safeParse({
     company_name: (formData.get("company_name") as string)?.trim() || null,
     website: (formData.get("website") as string)?.trim() || null,
     description: (formData.get("description") as string)?.trim() || null,
     logo_url: (formData.get("logo_url") as string)?.trim() || null,
   });
+  if (!parsed.success) return { ok: false as const, reason: "validation" };
 
-  const { error } = await supabase.from("brands").update(update).eq("id", user.id);
-  if (error) throw error;
+  const { error } = await supabase
+    .from("brands")
+    .update(parsed.data)
+    .eq("id", user.id);
+  if (error) return { ok: false as const, reason: "failed" };
 
   revalidatePath("/settings");
   revalidatePath("/dashboard");
+  return { ok: true as const };
 }

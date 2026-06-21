@@ -467,7 +467,7 @@ export default async function CampaignDetailPage({
             </CardTitle>
             <CardDescription>
               Pick saved artists and send one campaign invite to all of them at
-              once{campaign.budget != null ? " — we'll keep you inside budget" : ""}.
+              once{campaign.budget != null ? " — we'll keep cash offers inside your budget" : ""}.
             </CardDescription>
           </CardHeader>
           <CardContent>

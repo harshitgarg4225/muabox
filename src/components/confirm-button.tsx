@@ -32,6 +32,8 @@ export function ConfirmButton({
   confirmVariant = "destructive",
   successMessage,
   action,
+  disabled = false,
+  onPendingChange,
 }: {
   label: string;
   icon?: React.ReactNode;
@@ -43,6 +45,8 @@ export function ConfirmButton({
   confirmVariant?: Variant;
   successMessage: string;
   action: () => Promise<unknown>;
+  disabled?: boolean;
+  onPendingChange?: (pending: boolean) => void;
 }) {
   const router = useRouter();
   const [open, setOpen] = useState(false);
@@ -50,6 +54,7 @@ export function ConfirmButton({
 
   function confirm() {
     start(async () => {
+      onPendingChange?.(true);
       try {
         await action();
         toast.success(successMessage);
@@ -57,6 +62,7 @@ export function ConfirmButton({
         router.refresh();
       } catch {
         toast.error("Something went wrong. Please try again.");
+        onPendingChange?.(false);
       }
     });
   }
@@ -64,7 +70,7 @@ export function ConfirmButton({
   return (
     <Dialog open={open} onOpenChange={setOpen}>
       <DialogTrigger asChild>
-        <Button variant={variant} size={size}>
+        <Button variant={variant} size={size} disabled={disabled || pending}>
           {icon}
           {label}
         </Button>

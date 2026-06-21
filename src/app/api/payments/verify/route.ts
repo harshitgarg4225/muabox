@@ -1,7 +1,11 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { verifyPaymentSignature, razorpayConfigured } from "@/lib/razorpay";
+import {
+  verifyPaymentSignature,
+  razorpayConfigured,
+  fetchPayment,
+} from "@/lib/razorpay";
 import { rateLimit } from "@/lib/rate-limit";
 import { notifyPayment } from "@/lib/notify";
 import { attemptTransfer } from "@/lib/payouts";
@@ -55,6 +59,22 @@ export async function POST(req: Request) {
   }
   if (payment.status === "paid") {
     return NextResponse.json({ success: true });
+  }
+
+  // Defense-in-depth: confirm with Razorpay that this payment actually captured
+  // for this order + amount before moving money. If the API is unreachable we
+  // fall back to the (already cryptographically verified) signature; the webhook
+  // is the durable confirmation either way.
+  const rp = await fetchPayment(paymentId);
+  if (
+    rp &&
+    !(
+      (rp.status === "captured" || rp.status === "authorized") &&
+      rp.order_id === orderId &&
+      rp.amount === payment.amount
+    )
+  ) {
+    return NextResponse.json({ error: "not_captured" }, { status: 400 });
   }
 
   const now = new Date().toISOString();

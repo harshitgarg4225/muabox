@@ -52,6 +52,33 @@ export async function createOrder({
   return (await res.json()) as RazorpayOrder;
 }
 
+export type RazorpayPayment = {
+  id: string;
+  order_id: string | null;
+  status: string;
+  amount: number;
+  currency: string;
+};
+
+/** Fetch a payment from Razorpay to confirm its real captured state/amount. */
+export async function fetchPayment(
+  paymentId: string
+): Promise<RazorpayPayment | null> {
+  const auth = Buffer.from(
+    `${process.env.RAZORPAY_KEY_ID}:${process.env.RAZORPAY_KEY_SECRET}`
+  ).toString("base64");
+  try {
+    const res = await fetch(
+      `https://api.razorpay.com/v1/payments/${encodeURIComponent(paymentId)}`,
+      { headers: { Authorization: `Basic ${auth}` }, signal: AbortSignal.timeout(4000) }
+    );
+    if (!res.ok) return null;
+    return (await res.json()) as RazorpayPayment;
+  } catch {
+    return null;
+  }
+}
+
 /** Verify the checkout callback signature: HMAC_SHA256(order_id|payment_id, secret). */
 export function verifyPaymentSignature({
   orderId,

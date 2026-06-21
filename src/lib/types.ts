@@ -187,6 +187,7 @@ export type Payment = {
   transfer_id: string | null;
   transfer_status: "none" | "pending" | "processing" | "done" | "failed";
   transferred_amount: number | null;
+  fee_percent: number | null;
   created_at: string;
   updated_at: string;
 };

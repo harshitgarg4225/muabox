@@ -10,8 +10,12 @@ export const PLATFORM_FEE_PERCENT = Math.min(
   Math.max(0, Number(process.env.PLATFORM_FEE_PERCENT ?? 10))
 );
 
-export function artistShare(amount: number) {
-  const fee = Math.round((amount * PLATFORM_FEE_PERCENT) / 100);
+export function artistShare(
+  amount: number,
+  feePercent: number = PLATFORM_FEE_PERCENT
+) {
+  const pct = Math.min(100, Math.max(0, feePercent));
+  const fee = Math.round((amount * pct) / 100);
   return Math.max(0, amount - fee);
 }
 
@@ -58,7 +62,9 @@ export async function attemptTransfer(
     return;
   }
 
-  const amount = artistShare(payment.amount);
+  // Use the fee snapshotted when the brand paid, so a payout transferred later
+  // (after the artist onboards) honours the split that was in effect then.
+  const amount = artistShare(payment.amount, payment.fee_percent ?? undefined);
   try {
     const res = await createTransfer({
       paymentId: payment.razorpay_payment_id,

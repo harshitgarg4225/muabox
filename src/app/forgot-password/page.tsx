@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
+import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
 import {
@@ -32,11 +33,16 @@ export default function ForgotPasswordPage() {
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo,
       });
-      if (error) throw error;
+      // Supabase returns success even when the email doesn't exist (no
+      // enumeration), so a real error here is transport/rate-limit — surface it
+      // so the user can retry instead of waiting for a link that never sends.
+      if (error) {
+        toast.error("Couldn't send the reset email. Please try again in a moment.");
+        return;
+      }
       setSent(true);
     } catch {
-      // Don't reveal whether the email exists.
-      setSent(true);
+      toast.error("Couldn't send the reset email. Please try again in a moment.");
     } finally {
       setLoading(false);
     }
