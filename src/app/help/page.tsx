@@ -20,6 +20,18 @@ const ARTIST_FAQ = [
     q: "Who can see my profile?",
     a: "Only brands, and only while you’re accepting deals. Use “Preview my profile” on your dashboard to see exactly what they see.",
   },
+  {
+    q: "How do I deliver the content I agreed to?",
+    a: "Open the deal and go to “Deliverables & proof”. For each item the brand listed, paste the live Instagram post link and submit it. The brand approves it or requests changes — your dashboard reminds you of anything still pending.",
+  },
+  {
+    q: "What is the disclosure step?",
+    a: "Paid partnerships in India must be labelled (#ad / #sponsored) under ASCI rules. If a campaign requires it, tap “I’ll disclose with #ad” on the deal’s creative brief, and remember to add the tag to your post.",
+  },
+  {
+    q: "A brand wants to send me a product — is my address safe?",
+    a: "Yes. For gifting deals you can share a shipping address on the deal’s “Product shipping” section. Only that one brand can see it, and it’s deleted if you delete your account.",
+  },
 ];
 
 const BRAND_FAQ = [
@@ -38,6 +50,18 @@ const BRAND_FAQ = [
   {
     q: "What if an artist doesn’t respond?",
     a: "Send a friendly reminder from the deal or campaign page (once every 48 hours). Your dashboard also flags invites that have gone quiet.",
+  },
+  {
+    q: "Can I see the content artists actually post?",
+    a: "Yes. List the deliverables you expect on each deal; the artist submits the live post link for each one and you approve it or request changes. Your dashboard flags submissions waiting for review.",
+  },
+  {
+    q: "How do I give a brief and keep posts on-message?",
+    a: "Add a creative brief to the campaign — required hashtags, handles to tag, do’s & don’ts, and whether ASCI #ad disclosure is required. Every artist on the campaign sees it on their deal.",
+  },
+  {
+    q: "Can I track the sales an artist drives?",
+    a: "Assign each creator a unique promo code on the campaign’s “Promo codes & sales” section, then log redemptions and attributed revenue. The campaign ROI view rolls it up so you see real sales, not just reach.",
   },
 ];
 

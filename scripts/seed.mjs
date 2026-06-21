@@ -103,6 +103,7 @@ async function seedArtist(a) {
     await admin.from("instagram_media").insert(media);
   }
   console.log(`  ✓ artist ${a.name} (${email})`);
+  return id;
 }
 
 async function main() {
@@ -118,12 +119,99 @@ async function main() {
   console.log("  ✓ brand Lumière Skincare (brand@demo.muabox.app)");
 
   console.log("Seeding demo artists…");
+  const artistIds = [];
   for (const a of ARTISTS) {
     try {
-      await seedArtist(a);
+      artistIds.push(await seedArtist(a));
     } catch (e) {
       console.error(`  ✗ ${a.name}:`, e.message);
+      artistIds.push(null);
     }
+  }
+
+  // A live campaign with a brief + an accepted deal that shows the full
+  // execution layer: deliverables (one approved, one pending) and a promo code.
+  console.log("Seeding a demo campaign with an active collaboration…");
+  try {
+    const heroArtist = artistIds.find(Boolean);
+    const { data: existingCampaign } = await admin
+      .from("campaigns")
+      .select("id")
+      .eq("brand_id", brandId)
+      .eq("name", "Festive Glow Serum Launch")
+      .maybeSingle();
+    if (heroArtist && !existingCampaign) {
+      const { data: campaign } = await admin
+        .from("campaigns")
+        .insert({
+          brand_id: brandId,
+          name: "Festive Glow Serum Launch",
+          product: "1 Reel + 2 Stories featuring the Glow Serum",
+          description: "Warm, festive, daylight tones. Launch week.",
+          budget: 200000 * 100,
+          status: "active",
+          target_specialties: ["Bridal", "Editorial"],
+          compensation_type: "paid_product",
+          offer_description: "₹25,000 + full PR kit",
+          product_value: 8000 * 100,
+          required_hashtags: ["#LumiereGlow", "#ad"],
+          required_mentions: ["@lumiere.skincare"],
+          dos: "Show the serum texture in natural daylight",
+          donts: "No competitor products in frame",
+          disclosure_required: true,
+        })
+        .select("id")
+        .single();
+
+      const now = new Date().toISOString();
+      const { data: deal } = await admin
+        .from("deals")
+        .insert({
+          brand_id: brandId,
+          artist_id: heroArtist,
+          status: "accepted",
+          message: "We'd love you for our festive Glow Serum launch!",
+          product_description: "1 Reel + 2 Stories",
+          offer_amount: 25000 * 100,
+          currency: "INR",
+          initiated_by: "brand",
+          campaign_id: campaign?.id ?? null,
+          disclosure_confirmed_at: now,
+          last_message_at: now,
+          last_message_sender_id: brandId,
+          brand_read_at: now,
+        })
+        .select("id")
+        .single();
+
+      if (deal) {
+        await admin.from("deal_deliverables").insert([
+          {
+            deal_id: deal.id,
+            label: "Instagram Reel",
+            status: "approved",
+            post_url: "https://www.instagram.com/reel/DEMO123/",
+            submitted_at: now,
+            reviewed_at: now,
+          },
+          { deal_id: deal.id, label: "2 Instagram Stories", status: "pending" },
+        ]);
+        if (campaign?.id) {
+          await admin.from("promo_codes").insert({
+            campaign_id: campaign.id,
+            brand_id: brandId,
+            artist_id: heroArtist,
+            code: "GLOW15",
+            description: "15% off",
+            redemptions: 34,
+            revenue: 51000 * 100,
+          });
+        }
+      }
+      console.log("  ✓ campaign + accepted deal with deliverables & promo code");
+    }
+  } catch (e) {
+    console.error("  ✗ demo campaign:", e.message);
   }
 
   console.log("\nDone! Log in with any of the above emails · password:", PASSWORD);

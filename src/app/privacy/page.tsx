@@ -66,12 +66,27 @@ export default function PrivacyPage() {
           </p>
         </Section>
 
+        <Section title="Collaboration data">
+          <p>
+            To run a collaboration you agree to, we store the content you
+            exchange — deal terms and messages, the live post links artists
+            submit as proof of work, and reviews.
+          </p>
+          <p>
+            For product-gifting deals, an artist may choose to share a shipping
+            address (name, address, pincode and phone) so the brand can send the
+            product. This is provided with your explicit consent, is visible only
+            to the brand on that specific deal, and is deleted when your account
+            is deleted.
+          </p>
+        </Section>
+
         <Section title="How we use data">
           We use your data to operate the marketplace: showing artist profiles
-          to brands who you have consented to be discoverable by, and
-          delivering deal offers between brands and artists. We do not sell your
-          data, and we do not collect data from accounts that have not connected
-          to Muabox.
+          to brands who you have consented to be discoverable by, delivering deal
+          offers between brands and artists, and helping both sides run and
+          measure a collaboration. We do not sell your data, and we do not
+          collect data from accounts that have not connected to Muabox.
         </Section>
 
         <Section title="Deleting your data">

@@ -18,7 +18,23 @@ const campaignSchema = z.object({
   budget: z.number().int().min(0).max(10_00_00_000_00).nullable(), // ≤ ₹10 crore
   offer_description: z.string().trim().max(300).optional(),
   product_value: z.number().int().min(0).max(10_00_000_00).nullable(),
+  dos: z.string().trim().max(600).optional(),
+  donts: z.string().trim().max(600).optional(),
 });
+
+/** Parse a "#tag1, tag2 #tag3" / "@a, b" string into a clean, prefixed array. */
+function parseTokens(raw: string | null, prefix: "#" | "@"): string[] {
+  if (!raw) return [];
+  return [
+    ...new Set(
+      raw
+        .split(/[,\s]+/)
+        .map((t) => t.trim().replace(/^[#@]+/, ""))
+        .filter(Boolean)
+        .map((t) => `${prefix}${t}`)
+    ),
+  ].slice(0, 20);
+}
 
 export async function createCampaign(formData: FormData) {
   const { supabase, user } = await requireUser();
@@ -39,6 +55,8 @@ export async function createCampaign(formData: FormData) {
       (formData.get("offer_description") as string)?.trim() || undefined,
     product_value:
       Number.isFinite(pvNum) && pvNum > 0 ? Math.round(pvNum * 100) : null,
+    dos: (formData.get("dos") as string)?.trim() || undefined,
+    donts: (formData.get("donts") as string)?.trim() || undefined,
   });
   if (!parsed.success) return { ok: false as const, reason: "invalid" };
 
@@ -48,6 +66,16 @@ export async function createCampaign(formData: FormData) {
   const targetSpecialties = parseSpecialties(
     formData.get("target_specialties") as string
   );
+
+  const requiredHashtags = parseTokens(
+    formData.get("required_hashtags") as string,
+    "#"
+  );
+  const requiredMentions = parseTokens(
+    formData.get("required_mentions") as string,
+    "@"
+  );
+  const disclosureRequired = formData.get("disclosure_required") === "on";
 
   const { data: created, error } = await supabase
     .from("campaigns")
@@ -61,6 +89,11 @@ export async function createCampaign(formData: FormData) {
       compensation_type: compensationType,
       offer_description: parsed.data.offer_description ?? null,
       product_value: parsed.data.product_value,
+      required_hashtags: requiredHashtags,
+      required_mentions: requiredMentions,
+      dos: parsed.data.dos ?? null,
+      donts: parsed.data.donts ?? null,
+      disclosure_required: disclosureRequired,
       status: "active",
     })
     .select("id")
@@ -69,6 +102,51 @@ export async function createCampaign(formData: FormData) {
 
   revalidatePath("/campaigns");
   redirect(`/campaigns/${created.id}`);
+}
+
+const briefSchema = z.object({
+  campaignId: z.string().uuid(),
+  dos: z.string().trim().max(600).optional(),
+  donts: z.string().trim().max(600).optional(),
+  required_hashtags: z.array(z.string()).max(20),
+  required_mentions: z.array(z.string()).max(20),
+  disclosure_required: z.boolean(),
+});
+
+/** Edit a campaign's creative brief (hashtags, mentions, do's/don'ts, ASCI). */
+export async function updateCampaignBrief(input: {
+  campaignId: string;
+  dos?: string;
+  donts?: string;
+  requiredHashtags: string; // raw form strings
+  requiredMentions: string;
+  disclosureRequired: boolean;
+}) {
+  const { supabase, user } = await requireUser();
+  const parsed = briefSchema.safeParse({
+    campaignId: input.campaignId,
+    dos: input.dos?.trim() || undefined,
+    donts: input.donts?.trim() || undefined,
+    required_hashtags: parseTokens(input.requiredHashtags, "#"),
+    required_mentions: parseTokens(input.requiredMentions, "@"),
+    disclosure_required: input.disclosureRequired,
+  });
+  if (!parsed.success) return { ok: false as const, reason: "invalid" };
+
+  const { error } = await supabase
+    .from("campaigns")
+    .update({
+      dos: parsed.data.dos ?? null,
+      donts: parsed.data.donts ?? null,
+      required_hashtags: parsed.data.required_hashtags,
+      required_mentions: parsed.data.required_mentions,
+      disclosure_required: parsed.data.disclosure_required,
+    })
+    .eq("id", parsed.data.campaignId)
+    .eq("brand_id", user.id);
+  if (error) return { ok: false as const, reason: "failed" };
+  revalidatePath(`/campaigns/${parsed.data.campaignId}`);
+  return { ok: true as const };
 }
 
 export async function setCampaignStatus(
@@ -109,6 +187,11 @@ export async function duplicateCampaign(campaignId: string) {
       compensation_type: c.compensation_type,
       offer_description: c.offer_description,
       product_value: c.product_value,
+      required_hashtags: c.required_hashtags,
+      required_mentions: c.required_mentions,
+      dos: c.dos,
+      donts: c.donts,
+      disclosure_required: c.disclosure_required,
       status: "active",
     })
     .select("id")

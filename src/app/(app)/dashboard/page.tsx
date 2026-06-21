@@ -129,6 +129,14 @@ async function ArtistDashboard({
     .maybeSingle();
   const payoutActive = payout?.status === "active";
 
+  // Deliverables awaiting the artist (RLS scopes these to this artist's deals).
+  const { data: artistDelivRows } = await supabase
+    .from("deal_deliverables")
+    .select("status");
+  const toSubmit = (artistDelivRows ?? []).filter(
+    (d) => d.status === "pending" || d.status === "changes_requested"
+  ).length;
+
   // ---- Needs your attention ----
   const pendingOffers = allDeals.filter(
     (d) =>
@@ -160,6 +168,14 @@ async function ArtistDashboard({
       text: `${formatMoney(paidAwaitingPayout, "INR")} has been paid — add your bank details to receive it`,
       href: "/settings",
       cta: "Set up payouts",
+    });
+  }
+  if (toSubmit > 0) {
+    attention.push({
+      emoji: "✍️",
+      text: `${toSubmit} ${toSubmit === 1 ? "deliverable needs" : "deliverables need"} your post link`,
+      href: "/deals?scope=accepted",
+      cta: "Submit work",
     });
   }
 
@@ -387,6 +403,14 @@ async function BrandDashboard({
     .select("id", { count: "exact", head: true })
     .eq("brand_id", userId);
 
+  // Submitted deliverables awaiting this brand's review (RLS scopes to brand).
+  const { data: brandDelivRows } = await supabase
+    .from("deal_deliverables")
+    .select("status");
+  const toReview = (brandDelivRows ?? []).filter(
+    (d) => d.status === "submitted"
+  ).length;
+
   // ---- Needs your attention ----
   const now = nowMs();
   const pendingPitches = sent.filter(
@@ -428,6 +452,14 @@ async function BrandDashboard({
       text: `${unpaidAccepted.length} accepted ${unpaidAccepted.length === 1 ? "deal" : "deals"} awaiting payment (${formatMoney(unpaidValue, "INR")})`,
       href: "/deals?scope=accepted",
       cta: "Pay now",
+    });
+  }
+  if (toReview > 0) {
+    attention.push({
+      emoji: "🎬",
+      text: `${toReview} submitted ${toReview === 1 ? "deliverable is" : "deliverables are"} ready for your review`,
+      href: "/deals?scope=accepted",
+      cta: "Review content",
     });
   }
   if (staleInvites.length > 0) {

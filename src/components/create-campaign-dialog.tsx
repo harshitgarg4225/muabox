@@ -161,6 +161,48 @@ export function CreateCampaignDialog() {
                 ))}
               </div>
             </div>
+
+            {/* Creative brief — guides every artist's content. */}
+            <div className="space-y-3 rounded-xl border bg-secondary/30 p-3">
+              <p className="text-sm font-medium text-navy">
+                Creative brief <span className="text-muted-foreground">(optional)</span>
+              </p>
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="required_hashtags">Required hashtags</Label>
+                  <Input
+                    id="required_hashtags"
+                    name="required_hashtags"
+                    placeholder="#GlowSerum, #ad"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="required_mentions">Tag these handles</Label>
+                  <Input
+                    id="required_mentions"
+                    name="required_mentions"
+                    placeholder="@yourbrand"
+                  />
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dos">Do&apos;s</Label>
+                <Input id="dos" name="dos" placeholder="Show the texture, natural daylight" />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="donts">Don&apos;ts</Label>
+                <Input id="donts" name="donts" placeholder="No competitor products in frame" />
+              </div>
+              <label className="flex items-center gap-2 text-sm text-navy">
+                <input
+                  type="checkbox"
+                  name="disclosure_required"
+                  defaultChecked
+                  className="size-4 accent-[var(--navy)]"
+                />
+                Require ASCI <strong>#ad</strong> disclosure (recommended)
+              </label>
+            </div>
           </div>
 
           <DialogFooter>

@@ -93,6 +93,14 @@ create table campaigns (
   budget integer,                          -- paise; null = no fixed budget
   status text not null default 'active',   -- active | closed
   target_specialties text[] default '{}',
+  compensation_type text,                  -- paid | gifted | paid_product | commission
+  offer_description text,
+  product_value integer,                   -- paise (gifted value)
+  required_hashtags text[] default '{}',   -- creative brief: must-use tags
+  required_mentions text[] default '{}',   -- must-tag @handles
+  dos text,
+  donts text,
+  disclosure_required boolean not null default true,  -- ASCI #ad disclosure
   created_at timestamptz default now()
 );
 
@@ -116,6 +124,7 @@ create table deals (
   campaign_id uuid references campaigns(id) on delete set null,
   initiated_by user_role not null default 'brand',
   reminded_at timestamptz,
+  disclosure_confirmed_at timestamptz,     -- artist confirmed ASCI #ad disclosure
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -413,3 +422,91 @@ begin
   alter publication supabase_realtime add table deal_messages;
 exception when others then null;
 end $$;
+
+-- ============================================================================
+-- EXECUTION LAYER (0012): deliverables, shipments, promo codes
+-- ============================================================================
+
+-- DELIVERABLES & CONTENT PROOF — one row per expected piece of content.
+create table deal_deliverables (
+  id uuid primary key default gen_random_uuid(),
+  deal_id uuid not null references deals(id) on delete cascade,
+  label text not null,
+  post_url text,
+  status text not null default 'pending',  -- pending | submitted | approved | changes_requested
+  review_note text,
+  submitted_at timestamptz,
+  reviewed_at timestamptz,
+  created_at timestamptz default now()
+);
+create index deal_deliverables_deal_idx on deal_deliverables (deal_id);
+alter table deal_deliverables enable row level security;
+create policy "deliverable participants read" on deal_deliverables for select using (
+  exists (select 1 from deals d where d.id = deal_deliverables.deal_id
+    and (d.brand_id = auth.uid() or d.artist_id = auth.uid()))
+);
+create policy "brand creates deliverable" on deal_deliverables for insert with check (
+  exists (select 1 from deals d where d.id = deal_deliverables.deal_id and d.brand_id = auth.uid())
+);
+create policy "deliverable participants update" on deal_deliverables for update using (
+  exists (select 1 from deals d where d.id = deal_deliverables.deal_id
+    and (d.brand_id = auth.uid() or d.artist_id = auth.uid()))
+);
+create policy "brand deletes deliverable" on deal_deliverables for delete using (
+  exists (select 1 from deals d where d.id = deal_deliverables.deal_id and d.brand_id = auth.uid())
+);
+grant select, insert, update, delete on deal_deliverables to authenticated;
+
+-- PRODUCT SEEDING LOGISTICS — consented shipping, 1:1 with a deal.
+create table deal_shipments (
+  deal_id uuid primary key references deals(id) on delete cascade,
+  recipient_name text,
+  address_line text,
+  city text,
+  state text,
+  pincode text,
+  phone text,
+  courier text,
+  tracking_number text,
+  status text not null default 'pending',  -- pending | address_provided | shipped | delivered
+  shipped_at timestamptz,
+  delivered_at timestamptz,
+  created_at timestamptz default now(),
+  updated_at timestamptz default now()
+);
+alter table deal_shipments enable row level security;
+create policy "shipment participants read" on deal_shipments for select using (
+  exists (select 1 from deals d where d.id = deal_shipments.deal_id
+    and (d.brand_id = auth.uid() or d.artist_id = auth.uid()))
+);
+create policy "shipment participants write" on deal_shipments for insert with check (
+  exists (select 1 from deals d where d.id = deal_shipments.deal_id
+    and (d.brand_id = auth.uid() or d.artist_id = auth.uid()))
+);
+create policy "shipment participants update" on deal_shipments for update using (
+  exists (select 1 from deals d where d.id = deal_shipments.deal_id
+    and (d.brand_id = auth.uid() or d.artist_id = auth.uid()))
+);
+grant select, insert, update on deal_shipments to authenticated;
+
+-- PER-CREATOR PROMO CODES — sales attribution.
+create table promo_codes (
+  id uuid primary key default gen_random_uuid(),
+  campaign_id uuid not null references campaigns(id) on delete cascade,
+  brand_id uuid not null references brands(id) on delete cascade,
+  artist_id uuid not null references artists(id) on delete cascade,
+  code text not null,
+  description text,
+  redemptions integer not null default 0,
+  revenue integer not null default 0,       -- attributed sales, paise
+  created_at timestamptz default now(),
+  unique (campaign_id, code)
+);
+create index promo_codes_campaign_idx on promo_codes (campaign_id);
+create index promo_codes_artist_idx on promo_codes (artist_id);
+alter table promo_codes enable row level security;
+create policy "brand manages promo codes" on promo_codes for all
+  using (auth.uid() = brand_id) with check (auth.uid() = brand_id);
+create policy "artist reads own promo code" on promo_codes for select
+  using (auth.uid() = artist_id);
+grant select, insert, update, delete on promo_codes to authenticated;
