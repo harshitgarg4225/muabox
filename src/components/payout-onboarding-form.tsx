@@ -18,22 +18,27 @@ import {
 import { savePayoutAccount } from "@/app/(app)/settings/actions";
 import type { ArtistPayoutAccount } from "@/lib/types";
 
+// Bounds mirror the server schema (settings/actions.ts) so over-long input is
+// caught here with a clear field message instead of a generic server error.
 const schema = z.object({
-  legal_name: z.string().min(1, "Required"),
+  legal_name: z.string().min(1, "Required").max(120, "Too long"),
   email: z.string().email(),
-  phone: z.string().min(8, "Enter a valid phone"),
+  phone: z
+    .string()
+    .min(8, "Enter a valid phone")
+    .max(15, "Enter a valid phone"),
   business_type: z.string().default("individual"),
   pan: z
     .string()
     .regex(/^[A-Z]{5}[0-9]{4}[A-Z]$/i, "Invalid PAN")
     .or(z.literal(""))
     .optional(),
-  account_number: z.string().min(5, "Required"),
+  account_number: z.string().min(5, "Required").max(30, "Too long"),
   ifsc: z.string().regex(/^[A-Za-z]{4}0[A-Za-z0-9]{6}$/, "Invalid IFSC"),
-  beneficiary_name: z.string().min(1, "Required"),
-  city: z.string().min(1, "Required"),
-  state: z.string().min(1, "Required"),
-  postal_code: z.string().min(4, "Required"),
+  beneficiary_name: z.string().min(1, "Required").max(120, "Too long"),
+  city: z.string().min(1, "Required").max(60, "Too long"),
+  state: z.string().min(1, "Required").max(60, "Too long"),
+  postal_code: z.string().min(4, "Required").max(10, "Too long"),
 });
 
 type FormValues = z.input<typeof schema>;

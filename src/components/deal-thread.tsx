@@ -24,6 +24,7 @@ export function DealThread({
   const [messages, setMessages] = useState<DealMessage[]>(initialMessages);
   const [body, setBody] = useState("");
   const [sending, setSending] = useState(false);
+  const [realtimeUp, setRealtimeUp] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
 
   // Note: the parent remounts this component (via `key`) whenever the server
@@ -33,14 +34,15 @@ export function DealThread({
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages]);
 
-  // Fallback polling so the recipient sees new messages even if Realtime
-  // isn't enabled on the project. Pauses when the tab is hidden.
+  // Fallback polling — ONLY when Realtime isn't connected, so we don't
+  // double-refresh on every message. Pauses when the tab is hidden.
   useEffect(() => {
+    if (realtimeUp) return;
     const id = setInterval(() => {
       if (!document.hidden) router.refresh();
     }, 20000);
     return () => clearInterval(id);
-  }, [router]);
+  }, [router, realtimeUp]);
 
   // Live updates: on any new message for this deal, re-fetch under RLS.
   useEffect(() => {
@@ -57,8 +59,11 @@ export function DealThread({
         },
         () => router.refresh()
       )
-      .subscribe();
+      .subscribe((status) => {
+        setRealtimeUp(status === "SUBSCRIBED");
+      });
     return () => {
+      setRealtimeUp(false);
       supabase.removeChannel(channel);
     };
   }, [dealId, router]);

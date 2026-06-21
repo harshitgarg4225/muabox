@@ -221,7 +221,7 @@ export async function bulkInvite(input: {
 }) {
   const { supabase, user } = await requireUser();
 
-  const limit = rateLimit(`bulk-invite:${user.id}`, 5, 60_000 * 60);
+  const limit = await rateLimit(`bulk-invite:${user.id}`, 5, 60_000 * 60);
   if (!limit.ok) return { ok: false as const, reason: "rate_limited" };
 
   const parsed = bulkSchema.safeParse({
