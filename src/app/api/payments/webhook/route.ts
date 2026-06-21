@@ -47,27 +47,35 @@ export async function POST(req: Request) {
 
       if (payment && payment.status !== "paid") {
         const now = new Date().toISOString();
-        await admin
+        // Atomically claim the capture (only from 'created'). This makes the
+        // webhook idempotent against retries/replays and against the verify
+        // callback racing it — only one path runs the side effects.
+        const { data: claimed } = await admin
           .from("payments")
           .update({
             status: "paid",
             razorpay_payment_id: paymentId ?? payment.razorpay_payment_id,
             updated_at: now,
           })
-          .eq("id", payment.id);
-        await admin
-          .from("deals")
-          .update({ paid_at: now })
-          .eq("id", payment.deal_id);
-
-        const { data: fresh } = await admin
-          .from("payments")
-          .select("*")
           .eq("id", payment.id)
-          .single<Payment>();
-        if (fresh) await attemptTransfer(admin, fresh);
+          .eq("status", "created")
+          .select("id");
 
-        await notifyPayment(payment.deal_id);
+        if (claimed && claimed.length > 0) {
+          await admin
+            .from("deals")
+            .update({ paid_at: now })
+            .eq("id", payment.deal_id);
+
+          const { data: fresh } = await admin
+            .from("payments")
+            .select("*")
+            .eq("id", payment.id)
+            .single<Payment>();
+          if (fresh) await attemptTransfer(admin, fresh);
+
+          await notifyPayment(payment.deal_id);
+        }
       }
     }
   }

@@ -41,7 +41,9 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  // Routes that require an authenticated user.
+  // Routes that require an authenticated user. Keep in sync with proxy.ts's
+  // matcher — every matched app prefix must be guarded here, or a page that
+  // forgets its own check would be public.
   const protectedPrefixes = [
     "/dashboard",
     "/onboarding",
@@ -49,6 +51,9 @@ export async function updateSession(request: NextRequest) {
     "/discover",
     "/artists",
     "/deals",
+    "/campaigns",
+    "/brands",
+    "/admin",
   ];
   const isProtected = protectedPrefixes.some(
     (p) => pathname === p || pathname.startsWith(`${p}/`)

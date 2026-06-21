@@ -13,6 +13,11 @@ export async function selectRole(formData: FormData) {
   if (role !== "artist" && role !== "brand") {
     throw new Error("Invalid role");
   }
+  // A name is required so artists are findable and brands aren't hidden by the
+  // "company_name present" filter on the directory.
+  if (!fullName || fullName.length < 2) {
+    throw new Error("Please enter your name to continue.");
+  }
 
   const supabase = await createClient();
   const {

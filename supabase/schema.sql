@@ -361,7 +361,7 @@ create policy "participant writes review" on reviews for insert with check (
   and exists (
     select 1 from deals d
     where d.id = reviews.deal_id
-      and d.status in ('accepted', 'completed')
+      and d.status = 'completed'
       and (
         (d.brand_id = auth.uid() and d.artist_id = reviews.reviewee_id)
         or (d.artist_id = auth.uid() and d.brand_id = reviews.reviewee_id)

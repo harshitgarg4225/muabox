@@ -30,7 +30,9 @@ export async function submitReview(
     .eq("id", dealId)
     .maybeSingle();
   if (!deal) return { ok: false as const, reason: "not_found" };
-  if (deal.status !== "accepted" && deal.status !== "completed") {
+  // Only after the collaboration is marked complete — prevents premature
+  // (or retaliatory) ratings right after an offer is accepted.
+  if (deal.status !== "completed") {
     return { ok: false as const, reason: "not_yet" };
   }
 

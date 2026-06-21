@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Sparkles } from "lucide-react";
@@ -22,6 +22,15 @@ export default function UpdatePasswordPage() {
   const router = useRouter();
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  // null = checking, true/false = whether a valid recovery session exists.
+  const [hasSession, setHasSession] = useState<boolean | null>(null);
+
+  useEffect(() => {
+    const supabase = createClient();
+    supabase.auth.getSession().then(({ data }) => {
+      setHasSession(!!data.session);
+    });
+  }, []);
 
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
@@ -61,6 +70,17 @@ export default function UpdatePasswordPage() {
           <CardTitle>Set a new password</CardTitle>
           <CardDescription>Choose a new password for your account.</CardDescription>
         </CardHeader>
+        {hasSession === false ? (
+          <CardContent className="space-y-4">
+            <p className="text-sm text-muted-foreground">
+              This reset link has expired or already been used. Request a fresh
+              one and we&apos;ll email you a new link.
+            </p>
+            <Button asChild variant="accent" className="w-full">
+              <Link href="/forgot-password">Send a new reset link</Link>
+            </Button>
+          </CardContent>
+        ) : (
         <form onSubmit={onSubmit}>
           <CardContent>
             <div className="space-y-2">
@@ -82,12 +102,13 @@ export default function UpdatePasswordPage() {
               type="submit"
               variant="accent"
               className="w-full"
-              disabled={loading}
+              disabled={loading || hasSession === null}
             >
               Update password
             </Button>
           </CardFooter>
         </form>
+        )}
       </Card>
     </main>
   );

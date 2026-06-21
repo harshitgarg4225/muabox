@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { toast } from "sonner";
 import { createClient } from "@/lib/supabase/client";
@@ -31,6 +31,18 @@ export function LoginForm() {
   const [password, setPassword] = useState("");
   const [mode, setMode] = useState<"signin" | "signup">("signin");
   const [loading, setLoading] = useState(false);
+
+  // Surface auth-callback failures (e.g. expired/used magic link) instead of
+  // dropping the user on a pristine form with no explanation.
+  const authError = params.get("error");
+  useEffect(() => {
+    if (!authError) return;
+    toast.error(
+      authError === "missing_code"
+        ? "That sign-in link was incomplete. Please request a new one."
+        : "That sign-in link didn't work — it may have expired. Please try again."
+    );
+  }, [authError]);
 
   async function handlePassword(e: React.FormEvent) {
     e.preventDefault();

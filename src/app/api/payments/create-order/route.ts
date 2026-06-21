@@ -50,6 +50,13 @@ export async function POST(req: Request) {
   if (!amount || amount <= 0) {
     return NextResponse.json({ error: "no_amount" }, { status: 409 });
   }
+  if (!Number.isSafeInteger(amount)) {
+    return NextResponse.json({ error: "bad_amount" }, { status: 409 });
+  }
+  // Razorpay Route here is INR-only; refuse to charge a non-INR deal as INR.
+  if ((deal.currency ?? "INR") !== "INR") {
+    return NextResponse.json({ error: "unsupported_currency" }, { status: 409 });
+  }
 
   // Idempotency: reuse a still-open order for the same deal + amount instead of
   // creating duplicates on double-click.

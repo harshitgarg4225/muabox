@@ -106,6 +106,7 @@ export async function createTransfer(input: {
   accountId: string;
   amount: number; // paise
   notes?: Record<string, string>;
+  referenceId?: string; // unique per payout — Razorpay rejects duplicates
 }) {
   return rzp<{ items?: { id: string }[] }>(
     `/v1/payments/${input.paymentId}/transfers`,
@@ -117,6 +118,7 @@ export async function createTransfer(input: {
           amount: input.amount,
           currency: "INR",
           notes: input.notes,
+          ...(input.referenceId ? { reference_id: input.referenceId } : {}),
         },
       ],
     }

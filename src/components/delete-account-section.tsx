@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useFormStatus } from "react-dom";
 import { Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
@@ -62,18 +63,21 @@ export function DeleteAccountSection() {
                 <Button variant="outline">Cancel</Button>
               </DialogClose>
               <form action={deleteAccount}>
-                <Button
-                  type="submit"
-                  variant="destructive"
-                  disabled={confirm !== "DELETE"}
-                >
-                  Permanently delete
-                </Button>
+                <DeleteSubmit disabled={confirm !== "DELETE"} />
               </form>
             </DialogFooter>
           </DialogContent>
         </Dialog>
       </CardContent>
     </Card>
+  );
+}
+
+function DeleteSubmit({ disabled }: { disabled: boolean }) {
+  const { pending } = useFormStatus();
+  return (
+    <Button type="submit" variant="destructive" disabled={disabled || pending}>
+      {pending ? "Deleting…" : "Permanently delete"}
+    </Button>
   );
 }

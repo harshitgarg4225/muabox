@@ -41,10 +41,9 @@ export default async function CampaignsPage() {
         stats.get(d.campaign_id) ??
         { invited: 0, accepted: 0, committed: 0, spent: 0 };
       s.invited++;
-      if (d.status === "accepted" || d.status === "completed") {
-        s.accepted++;
-        s.committed += d.offer_amount ?? 0;
-      }
+      if (d.status === "accepted" || d.status === "completed") s.accepted++;
+      // Committed = all non-declined offers (matches the detail page + guard).
+      if (d.status !== "declined") s.committed += d.offer_amount ?? 0;
       if (d.paid_at) s.spent += d.offer_amount ?? 0;
       stats.set(d.campaign_id, s);
     }

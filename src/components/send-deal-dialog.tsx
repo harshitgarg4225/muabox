@@ -80,7 +80,11 @@ export function SendDealDialog({
           ? "Add a message first."
           : res.reason === "rate_limited"
             ? "You're sending deals too fast. Try again in a minute."
-            : "Could not send deal."
+            : res.reason === "over_budget"
+              ? "This offer would exceed the campaign's budget."
+              : res.reason === "invalid_campaign"
+                ? "That campaign isn't active anymore."
+                : "Could not send deal."
       );
     }
   }
@@ -152,25 +156,20 @@ export function SendDealDialog({
                 </select>
               </div>
             )}
-            <div className="grid grid-cols-3 gap-3">
-              <div className="col-span-2 space-y-2">
-                <Label htmlFor="offer_amount">Budget (optional)</Label>
+            <div className="space-y-2">
+              <Label htmlFor="offer_amount">Budget (optional)</Label>
+              <div className="relative">
+                <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-sm text-muted-foreground">
+                  ₹
+                </span>
                 <Input
                   id="offer_amount"
                   type="number"
                   min={0}
                   step="1"
                   placeholder="500"
+                  className="pl-7"
                   {...register("offer_amount")}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="currency">Currency</Label>
-                <Input
-                  id="currency"
-                  maxLength={3}
-                  className="uppercase"
-                  {...register("currency")}
                 />
               </div>
             </div>
