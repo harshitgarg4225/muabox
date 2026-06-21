@@ -37,8 +37,21 @@ export async function POST(req: Request) {
       await supabase.from("instagram_accounts").delete().eq("id", account.id);
     }
 
+    // Persist the request so /data-deletion-status can report a real status.
+    await supabase.from("data_deletion_requests").insert({
+      code: confirmationCode,
+      ig_user_id: igUserId,
+      status: "completed",
+    });
+
+    // Build an absolute status URL; fall back to the request origin if
+    // NEXT_PUBLIC_APP_URL isn't configured (Meta requires an absolute URL).
+    const base = APP || new URL(req.url).origin;
     return NextResponse.json({
-      url: `${APP}/data-deletion-status?id=${confirmationCode}`,
+      url: new URL(
+        `/data-deletion-status?id=${confirmationCode}`,
+        base
+      ).toString(),
       confirmation_code: confirmationCode,
     });
   } catch {

@@ -24,7 +24,12 @@ import type { Brand } from "@/lib/types";
 
 const schema = z.object({
   company_name: z.string().max(120).optional(),
-  website: z.string().url("Enter a valid URL").or(z.literal("")).optional(),
+  website: z
+    .string()
+    .url("Enter a valid URL")
+    .max(200, "URL is too long")
+    .or(z.literal(""))
+    .optional(),
   description: z.string().max(600).optional(),
 });
 
@@ -95,8 +100,11 @@ export function BrandSettingsForm({
     });
     fd.set("logo_url", logoUrl);
     try {
-      await updateBrandProfile(fd);
-      toast.success("Profile saved.");
+      const res = await updateBrandProfile(fd);
+      if (res?.ok) toast.success("Profile saved.");
+      else if (res?.reason === "validation")
+        toast.error("Please check the highlighted fields and try again.");
+      else toast.error("Could not save profile.");
     } catch {
       toast.error("Could not save profile.");
     }

@@ -111,8 +111,11 @@ export function ArtistSettingsForm({ artist }: { artist: Artist }) {
       )
     );
     try {
-      await updateArtistProfile(fd);
-      toast.success("Profile saved.");
+      const res = await updateArtistProfile(fd);
+      if (res?.ok) toast.success("Profile saved.");
+      else if (res?.reason === "validation")
+        toast.error("Please check the highlighted fields and try again.");
+      else toast.error("Could not save profile.");
     } catch {
       toast.error("Could not save profile.");
     }

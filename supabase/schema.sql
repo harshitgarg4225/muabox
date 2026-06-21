@@ -150,8 +150,9 @@ create table payments (
   currency text not null default 'INR',
   status text not null default 'created',  -- created | paid | failed
   transfer_id text,                  -- Razorpay Route transfer to the artist
-  transfer_status text not null default 'none',  -- none | pending | done | failed
+  transfer_status text not null default 'none',  -- none | pending | processing | done | failed
   transferred_amount integer,        -- minor units actually sent to the artist
+  fee_percent numeric,               -- platform fee % snapshot at order time
   created_at timestamptz default now(),
   updated_at timestamptz default now()
 );
@@ -510,3 +511,12 @@ create policy "brand manages promo codes" on promo_codes for all
 create policy "artist reads own promo code" on promo_codes for select
   using (auth.uid() = artist_id);
 grant select, insert, update, delete on promo_codes to authenticated;
+
+-- META DATA-DELETION REQUEST LOG (status surfaced at /data-deletion-status)
+create table data_deletion_requests (
+  code text primary key,
+  ig_user_id text,
+  status text not null default 'completed',  -- received | completed
+  created_at timestamptz default now()
+);
+alter table data_deletion_requests enable row level security;

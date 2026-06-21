@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { createOrder, razorpayConfigured } from "@/lib/razorpay";
+import { PLATFORM_FEE_PERCENT } from "@/lib/payouts";
 import { rateLimit } from "@/lib/rate-limit";
 import { logger } from "@/lib/logger";
 import type { Deal } from "@/lib/types";
@@ -100,6 +101,7 @@ export async function POST(req: Request) {
       amount,
       currency: "INR",
       status: "created",
+      fee_percent: PLATFORM_FEE_PERCENT, // snapshot the split at order time
     });
 
     return NextResponse.json({

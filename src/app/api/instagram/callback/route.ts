@@ -14,12 +14,14 @@ export const dynamic = "force-dynamic";
 
 const APP = process.env.NEXT_PUBLIC_APP_URL ?? "";
 
-function fail(reason: string) {
-  return NextResponse.redirect(`${APP}/dashboard?ig_error=${reason}`);
-}
-
 export async function GET(req: Request) {
   const url = new URL(req.url);
+  // Build redirects against the configured app URL, falling back to the request
+  // origin so a missing NEXT_PUBLIC_APP_URL never yields a broken redirect.
+  const base = APP || url.origin;
+  const fail = (reason: string) =>
+    NextResponse.redirect(new URL(`/dashboard?ig_error=${reason}`, base));
+
   const code = url.searchParams.get("code");
   const state = url.searchParams.get("state");
   const error = url.searchParams.get("error");
@@ -39,7 +41,7 @@ export async function GET(req: Request) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-  if (!user) return NextResponse.redirect(`${APP}/login`);
+  if (!user) return NextResponse.redirect(new URL("/login", base));
 
   try {
     // 1) code -> short-lived token
@@ -103,7 +105,7 @@ export async function GET(req: Request) {
       );
     }
 
-    return NextResponse.redirect(`${APP}/dashboard?connected=1`);
+    return NextResponse.redirect(new URL("/dashboard?connected=1", base));
   } catch {
     return fail("api");
   }

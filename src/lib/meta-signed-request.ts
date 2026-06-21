@@ -32,5 +32,12 @@ export function parseSignedRequest(signed: string): SignedRequestPayload {
     throw new Error("bad signed_request signature");
   }
 
-  return JSON.parse(base64UrlToBuffer(payload).toString("utf8"));
+  const data = JSON.parse(
+    base64UrlToBuffer(payload).toString("utf8")
+  ) as SignedRequestPayload;
+  // Meta only signs with HMAC-SHA256; reject anything else (defense-in-depth).
+  if (data.algorithm && String(data.algorithm).toUpperCase() !== "HMAC-SHA256") {
+    throw new Error("unexpected signed_request algorithm");
+  }
+  return data;
 }
