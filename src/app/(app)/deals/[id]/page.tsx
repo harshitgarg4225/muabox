@@ -177,8 +177,8 @@ export default async function DealDetailPage({
   }
   const showSeeding = collaborating && (isGifting || !!shipment);
 
-  // Reviews for this deal (both directions).
-  const reviewable = deal.status === "accepted" || deal.status === "completed";
+  // Reviews for this deal (both directions) — only once marked completed.
+  const reviewable = deal.status === "completed";
   let myReview: Review | null = null;
   let theirReview: Review | null = null;
   if (reviewable) {
@@ -325,8 +325,11 @@ export default async function DealDetailPage({
 
           {deal.paid_at && (
             <div className="rounded-xl border border-emerald-500/30 bg-emerald-500/5 px-4 py-2.5 text-sm font-medium text-emerald-700">
-              Paid {formatMoney(deal.offer_amount, deal.currency)} ·{" "}
-              <LocalDate iso={deal.paid_at} />
+              Paid
+              {deal.offer_amount != null
+                ? ` ${formatMoney(deal.offer_amount, deal.currency)}`
+                : ""}{" "}
+              · <LocalDate iso={deal.paid_at} />
             </div>
           )}
 

@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
-import { requireUser } from "@/lib/action-auth";
+import { requireUser, requireUserAllowSuspended } from "@/lib/action-auth";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { logger } from "@/lib/logger";
 import {
@@ -262,7 +262,7 @@ export async function savePayoutAccount(formData: FormData) {
  * cascades to profiles → artists/brands → deals/messages/payments/etc.
  */
 export async function deleteAccount() {
-  const { supabase, user } = await requireUser();
+  const { supabase, user } = await requireUserAllowSuspended();
   try {
     const admin = createAdminClient();
     const { error } = await admin.auth.admin.deleteUser(user.id);
@@ -271,7 +271,13 @@ export async function deleteAccount() {
     logger.error("account deletion failed", err, { userId: user.id });
     throw new Error("Could not delete account. Please contact support.");
   }
-  await supabase.auth.signOut();
+  // The auth user is already gone; never let a sign-out hiccup block the
+  // redirect (which would strand the user with a stale cookie + error page).
+  try {
+    await supabase.auth.signOut();
+  } catch (err) {
+    logger.error("post-deletion signOut failed", err, { userId: user.id });
+  }
   redirect("/");
 }
 

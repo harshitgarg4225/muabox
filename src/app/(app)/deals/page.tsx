@@ -45,6 +45,7 @@ export default async function DealsPage({
     .select("*")
     .eq(isArtist ? "artist_id" : "brand_id", user.id)
     .order("last_message_at", { ascending: false, nullsFirst: false })
+    .order("id", { ascending: false }) // tie-breaker for stable pagination
     .limit(PAGE + 1);
 
   // Triage scopes — so nobody hunts through one long list. "action" (artist:
@@ -60,13 +61,28 @@ export default async function DealsPage({
     query = query.eq("initiated_by", "artist");
   }
 
-  if (before) query = query.lt("last_message_at", before);
+  if (before) {
+    // Composite cursor "<last_message_at>__<id>" so deals sharing a timestamp
+    // aren't skipped across pages.
+    const sep = before.lastIndexOf("__");
+    if (sep > 0) {
+      const bVal = before.slice(0, sep);
+      const bId = before.slice(sep + 2);
+      query = query.or(
+        `last_message_at.lt.${bVal},and(last_message_at.eq.${bVal},id.lt.${bId})`
+      );
+    }
+  }
 
   const { data } = await query;
   const rows = (data as Deal[]) ?? [];
   const hasMore = rows.length > PAGE;
   const deals = rows.slice(0, PAGE);
-  const nextCursor = hasMore ? deals[deals.length - 1].last_message_at : null;
+  const lastDeal = deals[deals.length - 1];
+  const nextCursor =
+    hasMore && lastDeal?.last_message_at
+      ? `${lastDeal.last_message_at}__${lastDeal.id}`
+      : null;
 
   // Resolve counterparties from public views.
   const names = new Map<string, { name: string; avatar: string | null }>();
@@ -193,7 +209,11 @@ export default async function DealsPage({
                         <div className="size-11 rounded-full bg-muted" />
                       )}
                       {unread && (
-                        <span className="absolute -right-0.5 -top-0.5 size-3 rounded-full bg-yellow ring-2 ring-card" />
+                        <span
+                          role="img"
+                          aria-label="Unread"
+                          className="absolute -right-0.5 -top-0.5 size-3 rounded-full bg-yellow ring-2 ring-card"
+                        />
                       )}
                     </div>
 

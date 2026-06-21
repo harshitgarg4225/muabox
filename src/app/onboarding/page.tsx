@@ -139,6 +139,9 @@ function RoleCard({
             <Input
               id={`name-${role}`}
               name="full_name"
+              required
+              minLength={2}
+              maxLength={120}
               placeholder={role === "artist" ? "Your name" : "Your company"}
             />
           </div>

@@ -14,6 +14,7 @@ export function StarRating({
   className?: string;
 }) {
   const px = size === "md" ? "size-4" : "size-3.5";
+  const safe = Number.isFinite(value) ? value : 0; // tolerate null/NaN from views
   return (
     <span className={cn("inline-flex items-center gap-1", className)}>
       <span className="inline-flex">
@@ -22,14 +23,14 @@ export function StarRating({
             key={i}
             className={cn(
               px,
-              i <= Math.round(value)
+              i <= Math.round(safe)
                 ? "fill-yellow text-yellow"
                 : "fill-muted text-muted"
             )}
           />
         ))}
       </span>
-      <span className="text-sm font-medium text-navy">{value.toFixed(1)}</span>
+      <span className="text-sm font-medium text-navy">{safe.toFixed(1)}</span>
       {count != null && (
         <span className="text-xs text-muted-foreground">({count})</span>
       )}

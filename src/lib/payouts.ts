@@ -25,8 +25,22 @@ export async function attemptTransfer(
   payment: Payment
 ): Promise<void> {
   if (!routeConfigured()) return;
-  if (payment.transfer_status === "done") return;
   if (payment.status !== "paid" || !payment.razorpay_payment_id) return;
+  if (payment.transfer_status === "done" || payment.transfer_status === "processing") {
+    return; // fast path; the atomic claim below is the real guard
+  }
+
+  // Atomically CLAIM the transfer. Without this, the verify callback and the
+  // webhook (which both fire for the same capture) could each read
+  // transfer_status != 'done' and both create a transfer → double payout.
+  // Only one caller wins the conditional update.
+  const { data: claimed } = await admin
+    .from("payments")
+    .update({ transfer_status: "processing", updated_at: new Date().toISOString() })
+    .eq("id", payment.id)
+    .in("transfer_status", ["none", "pending", "failed"])
+    .select("id");
+  if (!claimed || claimed.length === 0) return; // someone else is handling it
 
   const { data: acct } = await admin
     .from("artist_payout_accounts")
@@ -34,7 +48,8 @@ export async function attemptTransfer(
     .eq("artist_id", payment.artist_id)
     .maybeSingle();
 
-  // Artist hasn't finished payout setup yet — hold for later reconcile.
+  // Artist hasn't finished payout setup yet — release the claim back to
+  // 'pending' so reconcilePendingTransfers picks it up after they onboard.
   if (!acct || acct.status !== "active" || !acct.razorpay_account_id) {
     await admin
       .from("payments")
@@ -50,6 +65,9 @@ export async function attemptTransfer(
       accountId: acct.razorpay_account_id,
       amount,
       notes: { deal_id: payment.deal_id },
+      // Idempotency: Razorpay rejects a duplicate reference_id, so a retry
+      // after an ambiguous failure can't create a second transfer.
+      referenceId: `payout_${payment.id}`,
     });
     await admin
       .from("payments")

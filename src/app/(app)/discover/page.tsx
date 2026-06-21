@@ -73,12 +73,14 @@ export default async function DiscoverPage({
 
   const sortKey = sort && SORT_COL[sort] ? sort : "followers";
   const sortCol = SORT_COL[sortKey];
-  const numericCursor = sortCol !== "created_at";
 
+  // Tie-broken by artist_id so paginating across rows that share a sort value
+  // (e.g. many nano artists at the same follower count) never drops anyone.
   let query = supabase
     .from("artist_public_stats")
     .select("*")
     .order(sortCol, { ascending: false, nullsFirst: false })
+    .order("artist_id", { ascending: false })
     .limit(PAGE + 1);
 
   if (q) {
@@ -107,7 +109,15 @@ export default async function DiscoverPage({
     query = query.in("artist_id", ids.length ? ids : ["00000000-0000-0000-0000-000000000000"]);
   }
   if (before) {
-    query = query.lt(sortCol, numericCursor ? Number(before) : before);
+    // Composite cursor "<sortValue>__<artistId>".
+    const sep = before.lastIndexOf("__");
+    if (sep > 0) {
+      const bVal = before.slice(0, sep);
+      const bId = before.slice(sep + 2);
+      query = query.or(
+        `${sortCol}.lt.${bVal},and(${sortCol}.eq.${bVal},artist_id.lt.${bId})`
+      );
+    }
   }
 
   const { data } = await query;
@@ -118,7 +128,9 @@ export default async function DiscoverPage({
     | (ArtistPublicStats & Record<string, unknown>)
     | undefined;
   const lastVal = last ? last[sortCol] : null;
-  const nextCursor = hasMore && lastVal != null ? String(lastVal) : null;
+  const lastId = last?.artist_id;
+  const nextCursor =
+    hasMore && lastVal != null && lastId ? `${lastVal}__${lastId}` : null;
 
   const ids = pageRows.map((a) => a.artist_id);
 

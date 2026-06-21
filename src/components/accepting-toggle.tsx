@@ -11,14 +11,24 @@ export function AcceptingToggle({ initial }: { initial: boolean }) {
   const [pending, startTransition] = useTransition();
 
   function onChange(value: boolean) {
+    const prev = checked;
     setChecked(value); // optimistic
     startTransition(async () => {
-      const res = await setAccepting(value);
-      if (!res.ok) {
-        setChecked(false);
-        toast.error("Connect Instagram before accepting deals.");
-      } else {
-        toast.success(value ? "You're now accepting deals." : "Deals paused.");
+      try {
+        const res = await setAccepting(value);
+        if (!res.ok) {
+          setChecked(prev); // revert to the real prior state, not blindly off
+          toast.error(
+            res.reason === "no_instagram"
+              ? "Connect Instagram before accepting deals."
+              : "Couldn't update — please try again."
+          );
+        } else {
+          toast.success(value ? "You're now accepting deals." : "Deals paused.");
+        }
+      } catch {
+        setChecked(prev);
+        toast.error("Couldn't update — please try again.");
       }
     });
   }

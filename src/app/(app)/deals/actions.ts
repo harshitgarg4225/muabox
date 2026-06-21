@@ -51,25 +51,33 @@ export async function sendDeal(formData: FormData) {
     const isMsg = parsed.error.issues.some((i) => i.path[0] === "message");
     return { ok: false as const, reason: isMsg ? "message_required" : "invalid" };
   }
-  const {
-    artistId,
-    message,
-    productDescription,
-    currency,
-    offerAmount,
-    campaignId,
-  } = parsed.data;
+  const { artistId, message, productDescription, offerAmount, campaignId } =
+    parsed.data;
 
-  // A linked campaign must be the brand's own, active campaign.
+  // A linked campaign must be the brand's own, active campaign — and a cash
+  // offer must fit the remaining budget (same guard as bulk invite).
   if (campaignId) {
     const { data: campaign } = await supabase
       .from("campaigns")
-      .select("id, status")
+      .select("id, status, budget")
       .eq("id", campaignId)
       .eq("brand_id", user.id)
       .maybeSingle();
     if (!campaign || campaign.status !== "active") {
       return { ok: false as const, reason: "invalid_campaign" };
+    }
+    if (campaign.budget != null && offerAmount != null) {
+      const { data: existing } = await supabase
+        .from("deals")
+        .select("offer_amount, status")
+        .eq("campaign_id", campaignId)
+        .neq("status", "declined");
+      const committed = (
+        (existing as { offer_amount: number | null }[]) ?? []
+      ).reduce((s, d) => s + (d.offer_amount ?? 0), 0);
+      if (committed + offerAmount > campaign.budget) {
+        return { ok: false as const, reason: "over_budget" };
+      }
     }
   }
 
@@ -84,7 +92,7 @@ export async function sendDeal(formData: FormData) {
       message,
       product_description: productDescription,
       offer_amount: offerAmount,
-      currency,
+      currency: "INR", // INR-only platform (Razorpay India + Route)
       status: "sent",
       initiated_by: "brand",
       campaign_id: campaignId ?? null,
@@ -215,7 +223,16 @@ export async function respondToDeal(dealId: string, status: DealStatus) {
 
 export async function completeDeal(dealId: string) {
   const { supabase, user } = await requireUser();
-  // Either participant can mark an accepted deal complete.
+  // Either participant — but only a participant — can mark a deal complete.
+  // (RLS would already block non-participants; this is defense-in-depth.)
+  const { data: deal } = await supabase
+    .from("deals")
+    .select("brand_id, artist_id")
+    .eq("id", dealId)
+    .maybeSingle();
+  if (!deal || (deal.brand_id !== user.id && deal.artist_id !== user.id)) {
+    throw new Error("Not allowed");
+  }
   const { error } = await supabase
     .from("deals")
     .update({ status: "completed" })

@@ -73,7 +73,11 @@ export default async function CampaignDetailPage({
   const acceptedDeals = deals.filter(
     (d) => d.status === "accepted" || d.status === "completed"
   );
-  const committed = acceptedDeals.reduce((s, d) => s + (d.offer_amount ?? 0), 0);
+  // "Committed" = every live (non-declined) offer's money — the same figure the
+  // bulk-invite budget guard reserves, so the bar and the guard agree.
+  const committed = deals
+    .filter((d) => d.status !== "declined")
+    .reduce((s, d) => s + (d.offer_amount ?? 0), 0);
   const spent = deals
     .filter((d) => d.paid_at)
     .reduce((s, d) => s + (d.offer_amount ?? 0), 0);
