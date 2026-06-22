@@ -211,11 +211,17 @@ export async function respondToDeal(dealId: string, status: DealStatus) {
     throw new Error("Deal already resolved");
   }
 
-  const { error } = await supabase
+  // Guard the transition in the WHERE clause too, so two concurrent responses
+  // (e.g. accept on one tab, decline on another) can't both land — only the
+  // first unresolved update wins.
+  const { data: updated, error } = await supabase
     .from("deals")
     .update({ status })
-    .eq("id", dealId);
+    .eq("id", dealId)
+    .in("status", ["sent", "viewed"])
+    .select("id");
   if (error) throw error;
+  if (!updated || updated.length === 0) throw new Error("Deal already resolved");
   after(() => notifyDealResponse(dealId, status));
   revalidatePath(`/deals/${dealId}`);
   revalidatePath("/deals");

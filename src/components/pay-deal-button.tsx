@@ -80,10 +80,13 @@ export function PayDealButton({
           });
           if (verifyRes.ok) {
             toast.success("Payment successful 🎉");
-            router.refresh();
           } else {
-            toast.error("Payment could not be verified. Contact support.");
+            // The charge succeeded at Razorpay (this handler only fires on
+            // success); our confirmation just lagged. The webhook reconciles
+            // it — reassure rather than alarm.
+            toast.message("Payment received — confirming now. This updates shortly.");
           }
+          router.refresh();
         },
       });
       rzp.on("payment.failed", () => toast.error("Payment failed. Try again."));
