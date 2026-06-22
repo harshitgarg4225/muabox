@@ -20,6 +20,7 @@ import { AttentionCard, type AttentionItem } from "@/components/attention-card";
 import { ProfileStrength, type StrengthCheck } from "@/components/profile-strength";
 import { LocalDate } from "@/components/local-date";
 import { timeGreeting, firstName, nowMs } from "@/lib/greeting";
+import { artistShare } from "@/lib/payouts";
 import {
   formatMoney,
   type Artist,
@@ -118,9 +119,12 @@ async function ArtistDashboard({
   const acceptedCount = allDeals.filter(
     (d) => d.status === "accepted" || d.status === "completed"
   ).length;
+  // Net of the platform fee — the amount that actually reaches the artist's
+  // bank, so it matches the deal page and their statement (not the gross
+  // budget the brand paid).
   const earned = allDeals
     .filter((d) => d.paid_at)
-    .reduce((s, d) => s + (d.offer_amount ?? 0), 0);
+    .reduce((s, d) => s + artistShare(d.offer_amount ?? 0), 0);
 
   const { data: payout } = await supabase
     .from("artist_payout_accounts")
@@ -148,7 +152,9 @@ async function ArtistDashboard({
     0
   );
   const paidAwaitingPayout = !payoutActive
-    ? allDeals.filter((d) => d.paid_at).reduce((s, d) => s + (d.offer_amount ?? 0), 0)
+    ? allDeals
+        .filter((d) => d.paid_at)
+        .reduce((s, d) => s + artistShare(d.offer_amount ?? 0), 0)
     : 0;
 
   const attention: AttentionItem[] = [];

@@ -74,7 +74,7 @@ export default async function DealsPage({
     }
   }
 
-  const { data } = await query;
+  const { data, error: loadError } = await query;
   const rows = (data as Deal[]) ?? [];
   const hasMore = rows.length > PAGE;
   const deals = rows.slice(0, PAGE);
@@ -157,7 +157,14 @@ export default async function DealsPage({
         })}
       </div>
 
-      {deals.length === 0 && scope ? (
+      {loadError ? (
+        <EmptyState
+          emoji="⚠️"
+          title="We couldn't load your deals"
+          body="This is on us, not you — your conversations are safe. Please refresh in a moment."
+          action={{ label: "Try again", href: scope ? `/deals?scope=${scope}` : "/deals" }}
+        />
+      ) : deals.length === 0 && scope ? (
         <EmptyState
           emoji="🗂️"
           title="Nothing here right now"

@@ -335,12 +335,9 @@ export default async function DealDetailPage({
 
           {profile.role === "artist" &&
             deal.offer_amount != null &&
-            deal.offer_amount > 0 &&
-            (deal.status === "accepted" ||
-              deal.status === "completed" ||
-              !!deal.paid_at) && (
+            deal.offer_amount > 0 && (
               <p className="text-sm text-muted-foreground">
-                You receive{" "}
+                {deal.paid_at ? "You received " : "You'll receive "}
                 <span className="font-semibold text-navy">
                   {formatMoney(artistShare(deal.offer_amount), deal.currency)}
                 </span>{" "}
